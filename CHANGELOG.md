@@ -4,6 +4,31 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 versionado según [SemVer](https://semver.org/lang/es/).
 
+## [0.4.0] - 2026-07-28
+
+### Agregado
+- Módulo **Incidencias**:
+  - Cualquier operador puede reportar una incidencia (los 6 tipos de la
+    spec), opcionalmente atada a una guarda (buscada por ticket o
+    documento, igual que en Devoluciones).
+  - Supervisor/administrador pueden marcarla resuelta.
+  - Para `ticket_perdido` y `entrega_especial` con guarda asociada,
+    supervisor/administrador tienen un botón **"Entregar sin ticket"** que
+    cierra la operación (mismo efecto que una devolución normal) y deja
+    registrado en la entrega que fue una autorización especial.
+- Menú lateral: Incidencias ahora visible también para operador (antes
+  solo supervisor/administrador) — reportar es de cualquiera, autorizar
+  sigue siendo de supervisor+.
+
+### Cambiado en el modelo de datos
+- `incidencias` suma campos denormalizados no listados en la v0.1 del
+  modelo (`codigoTicket`, `clienteNombre`, `reportadoPorNombre`) para
+  poder listar sin hacer una consulta extra por cada fila.
+
+### Pendiente
+- Confirmar si "Entregar sin ticket" debería pedir una confirmación
+  adicional o un motivo escrito aparte de la descripción de la incidencia.
+
 ## [0.3.0] - 2026-07-28
 
 ### Agregado

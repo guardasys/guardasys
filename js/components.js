@@ -72,7 +72,7 @@ const ITEMS_NAV = [
   { id: "inicio", etiqueta: "Inicio", roles: ["operador", "supervisor", "administrador"] },
   { id: "nueva-guarda", etiqueta: "Nueva guarda", roles: ["operador", "supervisor", "administrador"] },
   { id: "devoluciones", etiqueta: "Devoluciones", roles: ["operador", "supervisor", "administrador"] },
-  { id: "incidencias", etiqueta: "Incidencias", roles: ["supervisor", "administrador"] },
+  { id: "incidencias", etiqueta: "Incidencias", roles: ["operador", "supervisor", "administrador"] },
   { id: "reportes", etiqueta: "Reportes", roles: ["supervisor", "administrador"] },
   { id: "administracion", etiqueta: "Administración", roles: ["administrador"] },
   { id: "auditoria", etiqueta: "Auditoría", roles: ["administrador"] },
