@@ -345,3 +345,84 @@ button {
   padding: 40px;
   text-align: center;
 }
+
+/* ---------- Módulo de Administración ---------- */
+
+.tabs-admin {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--borde);
+  margin-bottom: 20px;
+}
+
+.tab-admin {
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--texto-suave);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.tab-admin:hover { color: var(--texto); }
+
+.tab-admin.activo {
+  color: var(--texto);
+  border-bottom-color: var(--ambar);
+  font-weight: 600;
+}
+
+.tabla-admin {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.tabla-admin th {
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--texto-suave);
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--borde);
+}
+
+.tabla-admin td {
+  padding: 10px;
+  border-bottom: 1px solid var(--borde);
+  vertical-align: middle;
+}
+
+.tabla-admin select {
+  padding: 5px 8px;
+  border: 1px solid var(--borde);
+  border-radius: 5px;
+  font-size: 13px;
+  background: var(--superficie);
+}
+
+.boton-chico {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.estado-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.estado-ok {
+  background: #e8f5ee;
+  color: var(--verde);
+}
+
+.estado-inactivo {
+  background: #f1f1ee;
+  color: var(--texto-suave);
+}

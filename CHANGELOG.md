@@ -4,6 +4,18 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 versionado según [SemVer](https://semver.org/lang/es/).
 
+## [0.2.0] - 2026-07-28
+
+### Agregado
+- Módulo **Administración** (solo rol administrador), con 4 pestañas:
+  - **Usuarios**: alta con email/contraseña (vía app secundaria de Firebase
+    para no reemplazar la sesión del admin logueado), cambio de rol y
+    activar/desactivar, sin tocar la consola de Firebase manualmente.
+  - **Puntos de guarda**: alta (código + nombre + capacidad), activar/desactivar.
+  - **Terminales**: alta asociada a un punto de guarda, activar/desactivar.
+  - **Impresoras**: alta asociada a una terminal (ruta de red, modelo).
+- Toda acción de este módulo queda registrada en `auditoria`.
+
 ## [0.1.1] - 2026-07-28
 
 ### Cambiado

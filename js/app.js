@@ -59,6 +59,8 @@ function App() {
     switch (paginaActiva) {
       case "nueva-guarda":
         return <NuevaGuarda usuario={usuario} />;
+      case "administracion":
+        return <AdministracionModule usuario={usuario} />;
       case "inicio":
       default:
         return <PanelInicio usuario={usuario} />;
