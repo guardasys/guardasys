@@ -4,6 +4,12 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 versionado según [SemVer](https://semver.org/lang/es/).
 
+## [0.5.2] - 2026-07-28
+
+### Cambiado
+- `js/servidor-impresion-config.js` completado con la IP interna real del
+  Servidor de Impresión: `http://172.16.249.60:3000`.
+
 ## [0.5.1] - 2026-07-28
 
 ### Cambiado
