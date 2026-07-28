@@ -61,6 +61,8 @@ function App() {
         return <NuevaGuarda usuario={usuario} />;
       case "administracion":
         return <AdministracionModule usuario={usuario} />;
+      case "devoluciones":
+        return <DevolucionesModule usuario={usuario} />;
       case "inicio":
       default:
         return <PanelInicio usuario={usuario} />;

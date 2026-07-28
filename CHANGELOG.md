@@ -4,6 +4,23 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 versionado según [SemVer](https://semver.org/lang/es/).
 
+## [0.3.0] - 2026-07-28
+
+### Agregado
+- Módulo **Devoluciones**: buscar una guarda abierta por código de ticket
+  o por documento del cliente (si hay más de una guarda abierta para ese
+  cliente, se muestra la lista para elegir), ver el detalle y los
+  volúmenes, y confirmar la entrega.
+- Soporte para entrega a un tercero autorizado (nombre + documento
+  verificado + notas), quedando registrado en `entregaSnapshot`.
+- Índice compuesto sugerido (`operaciones`: `clienteId` + `estado`) en
+  `firestore.indexes.json` para la búsqueda por documento.
+
+### Pendiente
+- Devolución parcial (entregar solo algunos volúmenes de una operación).
+- Definir si la entrega a terceros debe requerir autorización de un
+  supervisor (tema "usuarios y permisos").
+
 ## [0.2.1] - 2026-07-28
 
 ### Agregado
