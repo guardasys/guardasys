@@ -439,3 +439,15 @@ button {
   background: #f1f1ee;
   color: var(--texto-suave);
 }
+
+.bloque-json {
+  background: var(--azul-profundo);
+  color: #d7e0f0;
+  font-family: var(--fuente-mono);
+  font-size: 12px;
+  padding: 12px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 0;
+  max-height: 200px;
+}

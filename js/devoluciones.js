@@ -243,7 +243,7 @@ function DevolucionesModule({ usuario }) {
             <h2 style={{ marginTop: 20 }}>Volúmenes a entregar</h2>
             {operacion.volumenes.map((v) => (
               <div className="volumen-item" key={v.volumenId}>
-                <span className="tipo-badge">{v.tipo}</span>
+                <span className="tipo-badge">{etiquetaTipoVolumen(v.tipo)}</span>
                 <span>{v.descripcion}</span>
                 {v.cantidadItems && <span className="texto-suave">({v.cantidadItems} items)</span>}
               </div>

@@ -4,6 +4,35 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 versionado según [SemVer](https://semver.org/lang/es/).
 
+## [0.5.1] - 2026-07-28
+
+### Cambiado
+- Tipo de documento en "Nueva guarda" ahora ofrece **CI, DNI, CPF,
+  Pasaporte, Otro** (antes solo DNI/Pasaporte/Otro).
+- Tipo de volumen se muestra con mayúscula inicial en toda la interfaz
+  (el valor guardado en Firestore sigue en minúscula, sin cambios en
+  datos ya existentes).
+
+### Agregado
+- Botón **"Buscar nombre"** cuando el tipo de documento es CPF: consulta
+  al nuevo Servidor Central de Impresión (repo separado
+  `guardasys-servidor-impresion`), que a su vez consulta
+  `api.cpf-brasil.org` sin exponer la API key en el frontend, y
+  autocompleta el nombre del cliente nuevo.
+- `js/servidor-impresion-config.js`: URL del Servidor de Impresión
+  (completar con la IP interna real una vez desplegado).
+
+## [0.5.0] - 2026-07-28
+
+### Agregado
+- Módulo **Auditoría** (solo administrador): listado paginado (50 por
+  página) de todos los registros de `auditoria`, con filtro por tipo de
+  acción (usa índice compuesto `accion` + `fechaHora`) y búsqueda de texto
+  por usuario/entidad sobre lo ya cargado. Cada fila se puede expandir
+  para ver el detalle `datosAntes` / `datosDespues`.
+- Nuevo índice compuesto en `firestore.indexes.json` (`auditoria`:
+  `accion` + `fechaHora`).
+
 ## [0.4.0] - 2026-07-28
 
 ### Agregado

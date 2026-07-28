@@ -65,6 +65,8 @@ function App() {
         return <DevolucionesModule usuario={usuario} />;
       case "incidencias":
         return <IncidenciasModule usuario={usuario} />;
+      case "auditoria":
+        return <AuditoriaModule />;
       case "inicio":
       default:
         return <PanelInicio usuario={usuario} />;

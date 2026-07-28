@@ -138,6 +138,11 @@ function PanelInicio({ usuario }) {
 // ============================================================================
 
 const TIPOS_VOLUMEN = ["valija", "bolsa", "compra", "otro"];
+const TIPOS_DOCUMENTO = ["CI", "DNI", "CPF", "Pasaporte", "Otro"];
+
+function etiquetaTipoVolumen(tipo) {
+  return tipo.charAt(0).toUpperCase() + tipo.slice(1);
+}
 
 function generarIdVolumen() {
   return "v_" + Math.random().toString(36).slice(2, 10);
@@ -157,6 +162,7 @@ function NuevaGuarda({ usuario }) {
   const [tipoDocumento, setTipoDocumento] = useState("DNI");
   const [numeroDocumento, setNumeroDocumento] = useState("");
   const [buscando, setBuscando] = useState(false);
+  const [buscandoCpf, setBuscandoCpf] = useState(false);
   const [clienteEncontrado, setClienteEncontrado] = useState(null); // {id, ...datos} | null
   const [clienteEsNuevo, setClienteEsNuevo] = useState(false);
   const [formCliente, setFormCliente] = useState({
@@ -211,6 +217,30 @@ function NuevaGuarda({ usuario }) {
       setMensaje({ tipo: "error", texto: "Error al buscar el cliente." });
     } finally {
       setBuscando(false);
+    }
+  }
+
+  async function buscarNombrePorCpf() {
+    if (!numeroDocumento.trim()) return;
+    if (!GUARDASYS_SERVIDOR_IMPRESION_URL || GUARDASYS_SERVIDOR_IMPRESION_URL.includes("REEMPLAZAR")) {
+      setMensaje({ tipo: "error", texto: "Falta configurar la URL del Servidor de Impresión (js/servidor-impresion-config.js)." });
+      return;
+    }
+    setBuscandoCpf(true);
+    setMensaje(null);
+    try {
+      const resp = await fetch(`${GUARDASYS_SERVIDOR_IMPRESION_URL}/consultar-cpf/${numeroDocumento.trim()}`);
+      const data = await resp.json();
+      if (data.success && data.nombre) {
+        setFormCliente((f) => ({ ...f, nombreCompleto: data.nombre }));
+      } else {
+        setMensaje({ tipo: "error", texto: "No se encontró un nombre para ese CPF." });
+      }
+    } catch (err) {
+      console.error(err);
+      setMensaje({ tipo: "error", texto: "No se pudo conectar con el Servidor de Impresión (¿estás en la VPN?)." });
+    } finally {
+      setBuscandoCpf(false);
     }
   }
 
@@ -388,9 +418,11 @@ function NuevaGuarda({ usuario }) {
               <div className="campo">
                 <label>Tipo de documento</label>
                 <select value={tipoDocumento} onChange={(e) => setTipoDocumento(e.target.value)}>
-                  <option value="DNI">DNI</option>
-                  <option value="Pasaporte">Pasaporte</option>
-                  <option value="Otro">Otro</option>
+                  {TIPOS_DOCUMENTO.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="campo">
@@ -422,10 +454,23 @@ function NuevaGuarda({ usuario }) {
                 <div className="fila-campos">
                   <div className="campo">
                     <label>Nombre completo</label>
-                    <input
-                      value={formCliente.nombreCompleto}
-                      onChange={(e) => setFormCliente({ ...formCliente, nombreCompleto: e.target.value })}
-                    />
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <input
+                        value={formCliente.nombreCompleto}
+                        onChange={(e) => setFormCliente({ ...formCliente, nombreCompleto: e.target.value })}
+                        style={{ flex: 1 }}
+                      />
+                      {tipoDocumento === "CPF" && (
+                        <button
+                          type="button"
+                          className="boton boton-secundario"
+                          onClick={buscarNombrePorCpf}
+                          disabled={buscandoCpf}
+                        >
+                          {buscandoCpf ? "Buscando…" : "Buscar nombre"}
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div className="campo">
                     <label>Nacionalidad</label>
@@ -458,7 +503,7 @@ function NuevaGuarda({ usuario }) {
 
             {volumenes.map((v) => (
               <div className="volumen-item" key={v.volumenId}>
-                <span className="tipo-badge">{v.tipo}</span>
+                <span className="tipo-badge">{etiquetaTipoVolumen(v.tipo)}</span>
                 <span>{v.descripcion}</span>
                 {v.cantidadItems && <span className="texto-suave">({v.cantidadItems} items)</span>}
                 <button className="quitar" onClick={() => quitarVolumen(v.volumenId)}>
@@ -476,7 +521,7 @@ function NuevaGuarda({ usuario }) {
                 >
                   {TIPOS_VOLUMEN.map((t) => (
                     <option key={t} value={t}>
-                      {t}
+                      {etiquetaTipoVolumen(t)}
                     </option>
                   ))}
                 </select>
