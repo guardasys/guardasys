@@ -1,0 +1,88 @@
+rules_version = '2';
+
+// ============================================================================
+// REGLAS DE FIRESTORE — TOKU Importados, Sistema de Guarda de Volúmenes
+// ============================================================================
+// Propuesta inicial (v0.1) basada en el rol guardado en usuarios/{uid}.rol.
+// A revisar junto con el tema "usuarios y permisos" — esto es un punto de
+// partida razonable para poder probar el módulo de Nueva Guarda, no la
+// versión final de permisos por pantalla/acción.
+// ============================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function autenticado() {
+      return request.auth != null;
+    }
+
+    function datosUsuario() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
+    }
+
+    function rol() {
+      return autenticado() ? datosUsuario().rol : null;
+    }
+
+    function esOperador() { return rol() in ["operador", "supervisor", "administrador"]; }
+    function esSupervisor() { return rol() in ["supervisor", "administrador"]; }
+    function esAdministrador() { return rol() == "administrador"; }
+
+    // -- usuarios: cada quien lee su propio doc; solo admin gestiona todos --
+    match /usuarios/{uid} {
+      allow read: if autenticado() && (request.auth.uid == uid || esAdministrador());
+      allow write: if esAdministrador();
+    }
+
+    // -- catálogos de configuración: lectura para operar, escritura admin --
+    match /puntosGuarda/{id} {
+      allow read: if esOperador();
+      allow write: if esAdministrador();
+    }
+    match /terminales/{id} {
+      allow read: if esOperador();
+      allow write: if esAdministrador();
+    }
+    match /impresoras/{id} {
+      allow read: if esOperador();
+      allow write: if esAdministrador();
+    }
+    match /ubicacionesFisicas/{id} {
+      allow read: if esOperador();
+      allow write: if esSupervisor();
+    }
+
+    // -- operación diaria --
+    match /clientes/{id} {
+      allow read, create, update: if esOperador();
+      allow delete: if false; // nunca se borra, solo se marca/actualiza
+    }
+
+    match /operaciones/{id} {
+      allow read, create: if esOperador();
+      // cerrar/editar una operación (devolución) — operador para el flujo
+      // normal; incidencias/entregas especiales las autoriza un supervisor
+      // (se afina en el tema "usuarios y permisos")
+      allow update: if esOperador();
+      allow delete: if false;
+    }
+
+    match /contadores/{id} {
+      allow read: if esOperador();
+      allow write: if esOperador(); // se escribe dentro de la transacción de ticket
+    }
+
+    match /incidencias/{id} {
+      allow read: if esOperador();
+      allow create: if esOperador();
+      allow update: if esSupervisor(); // autorizar/resolver
+    }
+
+    // -- auditoría: solo inserción, nadie edita ni borra --
+    match /auditoria/{id} {
+      allow read: if esSupervisor();
+      allow create: if esOperador();
+      allow update, delete: if false;
+    }
+  }
+}
