@@ -222,6 +222,19 @@ button {
   margin-bottom: 12px;
 }
 
+.version-sistema {
+  font-family: var(--fuente-mono);
+  font-size: 11px;
+  color: rgba(255,255,255,0.4);
+  text-align: center;
+  margin-top: 12px;
+}
+
+.version-sistema-login {
+  color: var(--texto-suave);
+  margin-top: 20px;
+}
+
 /* ---------- Contenido ---------- */
 
 .contenido {

@@ -57,6 +57,7 @@ index.html              punto de entrada
 css/styles.css          estilos
 js/firebase-config.js   credenciales del proyecto de Firebase (completar)
 js/firebase-init.js     inicialización de Firebase (no tocar salvo cambios de infraestructura)
+js/version.js           número de versión mostrado en la interfaz (actualizar en cada entrega)
 js/components.js        componentes React (Login, Sidebar, módulos)
 js/app.js               componente raíz, sesión y ruteo
 firestore.rules          reglas de seguridad

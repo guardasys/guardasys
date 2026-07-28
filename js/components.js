@@ -58,6 +58,7 @@ function Login() {
             {cargando ? "Ingresando…" : "Ingresar"}
           </button>
         </form>
+        <div className="version-sistema version-sistema-login">GuardaSys v{GUARDASYS_VERSION}</div>
       </div>
     </div>
   );
@@ -103,6 +104,7 @@ function Sidebar({ usuario, paginaActiva, onNavegar, onCerrarSesion }) {
         <button className="boton boton-secundario" onClick={onCerrarSesion} style={{ width: "100%" }}>
           Cerrar sesión
         </button>
+        <div className="version-sistema">GuardaSys v{GUARDASYS_VERSION}</div>
       </div>
     </div>
   );

@@ -4,6 +4,13 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 versionado según [SemVer](https://semver.org/lang/es/).
 
+## [0.2.1] - 2026-07-28
+
+### Agregado
+- Número de versión visible en la interfaz (pie del menú lateral y pantalla
+  de login), leído desde `js/version.js` — actualizar ese archivo en cada
+  entrega.
+
 ## [0.2.0] - 2026-07-28
 
 ### Agregado
