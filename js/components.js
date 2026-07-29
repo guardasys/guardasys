@@ -451,27 +451,28 @@ function NuevaGuarda({ usuario }) {
                 <p className="texto-suave" style={{ marginBottom: 12 }}>
                   No se encontró un cliente con ese documento. Completá los datos para registrarlo:
                 </p>
-                <div className="fila-campos">
-                  <div className="campo">
-                    <label>Nombre completo</label>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <input
-                        value={formCliente.nombreCompleto}
-                        onChange={(e) => setFormCliente({ ...formCliente, nombreCompleto: e.target.value })}
-                        style={{ flex: 1 }}
-                      />
-                      {tipoDocumento === "CPF" && (
-                        <button
-                          type="button"
-                          className="boton boton-secundario"
-                          onClick={buscarNombrePorCpf}
-                          disabled={buscandoCpf}
-                        >
-                          {buscandoCpf ? "Buscando…" : "Buscar nombre"}
-                        </button>
-                      )}
-                    </div>
+                <div className="campo" style={{ marginBottom: 14 }}>
+                  <label>Nombre completo</label>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input
+                      value={formCliente.nombreCompleto}
+                      onChange={(e) => setFormCliente({ ...formCliente, nombreCompleto: e.target.value })}
+                      style={{ flex: 1 }}
+                    />
+                    {tipoDocumento === "CPF" && (
+                      <button
+                        type="button"
+                        className="boton boton-secundario"
+                        onClick={buscarNombrePorCpf}
+                        disabled={buscandoCpf}
+                        style={{ flexShrink: 0 }}
+                      >
+                        {buscandoCpf ? "Buscando…" : "Buscar nombre"}
+                      </button>
+                    )}
                   </div>
+                </div>
+                <div className="fila-campos">
                   <div className="campo">
                     <label>Nacionalidad</label>
                     <input

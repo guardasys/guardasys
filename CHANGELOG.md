@@ -4,6 +4,20 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 versionado según [SemVer](https://semver.org/lang/es/).
 
+## [0.5.3] - 2026-07-28
+
+### Confirmado
+- Probado de punta a punta desde GitHub Pages + Servidor de Impresión en
+  la red de TOKU: funciona. Chrome pide permiso ("¿este sitio quiere
+  acceder a otros dispositivos en tu red local?") la primera vez —
+  hay que tocar "Allow" una vez por navegador/PC. No hizo falta HTTPS en
+  el servidor para este caso.
+
+### Corregido
+- El campo "Nombre completo" quedaba muy angosto (dentro de la grilla de
+  4 columnas) y no se veían nombres largos traídos por la consulta de
+  CPF. Ahora tiene su propia fila a ancho completo.
+
 ## [0.5.2] - 2026-07-28
 
 ### Cambiado
