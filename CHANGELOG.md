@@ -4,6 +4,26 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 versionado según [SemVer](https://semver.org/lang/es/).
 
+## [0.6.0] - 2026-07-28
+
+### Agregado
+- Módulo **Reportes** (cálculo al vuelo, decisión confirmada con Paolo —
+  sin contadores mantenidos por ahora):
+  - Selector de rango de fechas (por defecto, hoy).
+  - Resumen del período: guardas registradas, volúmenes, clientes
+    distintos, cerradas/abiertas, tiempo promedio de guarda.
+  - Ocupación actual por punto de guarda (en tiempo real, no depende del
+    rango de fechas).
+  - Actividad por operador y guardas por punto, dentro del período.
+  - Incidencias del período por tipo.
+  - Reimpresiones: placeholder — no hay datos todavía porque la
+    impresión de tickets en sí no está implementada.
+
+Con esto quedan cubiertos los 13 puntos del alcance funcional original
+(sección 5 del brief). Lo que sigue pendiente es transversal a todo el
+sistema: impresión ESC/POS real, ubicaciones físicas, y dejar el
+Servidor de Impresión corriendo de forma permanente.
+
 ## [0.5.3] - 2026-07-28
 
 ### Confirmado

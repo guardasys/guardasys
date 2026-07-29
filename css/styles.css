@@ -451,3 +451,31 @@ button {
   margin: 0;
   max-height: 200px;
 }
+
+/* ---------- Módulo de Reportes ---------- */
+
+.grilla-metricas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 14px;
+}
+
+.metrica {
+  background: var(--fondo);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.metrica-valor {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--texto);
+  font-family: var(--fuente-mono);
+}
+
+.metrica-etiqueta {
+  font-size: 12px;
+  color: var(--texto-suave);
+  margin-top: 4px;
+}
