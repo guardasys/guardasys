@@ -4,6 +4,15 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 versionado según [SemVer](https://semver.org/lang/es/).
 
+## [0.6.1] - 2026-07-28
+
+### Corregido
+- Tabla de **Terminales**: la columna "Impresora asignada" mostraba el ID
+  interno del documento en vez del nombre de la impresora. Ahora muestra
+  el nombre.
+- Tabla de **Impresoras existentes**: se agregó la columna "Ruta de red",
+  que antes no se veía (solo se cargaba al crearla).
+
 ## [0.6.0] - 2026-07-28
 
 ### Agregado

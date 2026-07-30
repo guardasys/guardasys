@@ -418,6 +418,7 @@ function AdminPuntosGuarda({ usuario }) {
 function AdminTerminales({ usuario }) {
   const [lista, setLista] = useState([]);
   const [puntosGuarda, setPuntosGuarda] = useState([]);
+  const [impresoras, setImpresoras] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [mensaje, setMensaje] = useState(null);
   const [guardando, setGuardando] = useState(false);
@@ -443,6 +444,10 @@ function AdminTerminales({ usuario }) {
         setPuntosGuarda(lista);
         if (lista.length > 0) setForm((f) => ({ ...f, puntoGuardaId: lista[0].id }));
       });
+    window.guardaSysDb
+      .collection("impresoras")
+      .get()
+      .then((snap) => setImpresoras(snap.docs.map((d) => ({ id: d.id, ...d.data() }))));
   }, []);
 
   async function crear(e) {
@@ -481,6 +486,12 @@ function AdminTerminales({ usuario }) {
   function nombrePuntoGuarda(id) {
     const p = puntosGuarda.find((p) => p.id === id);
     return p ? p.nombre : id;
+  }
+
+  function nombreImpresora(id) {
+    if (!id) return null;
+    const i = impresoras.find((i) => i.id === id);
+    return i ? i.nombre : id;
   }
 
   return (
@@ -539,7 +550,7 @@ function AdminTerminales({ usuario }) {
                 <tr key={t.id}>
                   <td><span className="ticket-codigo">{t.codigo}</span></td>
                   <td>{nombrePuntoGuarda(t.puntoGuardaId)}</td>
-                  <td>{t.impresoraId || "— sin asignar —"}</td>
+                  <td>{nombreImpresora(t.impresoraId) || "— sin asignar —"}</td>
                   <td>
                     <span className={"estado-badge " + (t.activo ? "estado-ok" : "estado-inactivo")}>
                       {t.activo ? "Activo" : "Inactivo"}
@@ -688,6 +699,7 @@ function AdminImpresoras({ usuario }) {
               <tr>
                 <th>Nombre</th>
                 <th>Terminal</th>
+                <th>Ruta de red</th>
                 <th>Modelo</th>
                 <th>Estado</th>
               </tr>
@@ -697,6 +709,7 @@ function AdminImpresoras({ usuario }) {
                 <tr key={i.id}>
                   <td>{i.nombre}</td>
                   <td>{nombreTerminal(i.terminalId)}</td>
+                  <td><span className="ticket-codigo">{i.rutaRed}</span></td>
                   <td>{i.modelo}</td>
                   <td>
                     <span className={"estado-badge " + (i.estado === "ok" ? "estado-ok" : "estado-inactivo")}>
