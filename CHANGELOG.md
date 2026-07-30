@@ -4,6 +4,15 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 versionado según [SemVer](https://semver.org/lang/es/).
 
+## [0.7.2] - 2026-07-28
+
+### Agregado
+- Botón **"Probar"** en Administración → Impresoras: manda un ticket de
+  prueba corto a esa impresora (usa el nuevo endpoint `/imprimir-prueba`
+  del Servidor de Impresión), sin tener que crear una guarda completa.
+  Muestra el resultado (éxito/error) debajo del botón, y queda en
+  auditoría.
+
 ## [0.7.1] - 2026-07-28
 
 ### Cambiado

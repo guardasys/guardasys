@@ -25,6 +25,7 @@ const ACCIONES_AUDITORIA = [
   "desactivar_terminal",
   "crear_impresora",
   "editar_impresora",
+  "probar_impresora",
   "crear_incidencia",
   "resolver_incidencia",
 ];

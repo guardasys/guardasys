@@ -584,6 +584,8 @@ function AdminImpresoras({ usuario }) {
   const [form, setForm] = useState({ nombre: "", rutaRed: "", terminalId: "", modelo: "Epson TM-T20III" });
   const [editandoId, setEditandoId] = useState(null);
   const [rutaEditada, setRutaEditada] = useState("");
+  const [probandoId, setProbandoId] = useState(null);
+  const [resultadoPrueba, setResultadoPrueba] = useState({}); // { [impresoraId]: {tipo, texto} }
 
   function cargarLista() {
     setCargando(true);
@@ -632,6 +634,42 @@ function AdminImpresoras({ usuario }) {
       cargarLista();
     } finally {
       setGuardando(false);
+    }
+  }
+
+  async function probarImpresora(impresora) {
+    setProbandoId(impresora.id);
+    setResultadoPrueba((prev) => ({ ...prev, [impresora.id]: null }));
+
+    if (!GUARDASYS_SERVIDOR_IMPRESION_URL || GUARDASYS_SERVIDOR_IMPRESION_URL.includes("REEMPLAZAR")) {
+      setResultadoPrueba((prev) => ({
+        ...prev,
+        [impresora.id]: { tipo: "error", texto: "Falta configurar la URL del Servidor de Impresión." },
+      }));
+      setProbandoId(null);
+      return;
+    }
+
+    try {
+      const resp = await fetch(`${GUARDASYS_SERVIDOR_IMPRESION_URL}/imprimir-prueba`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rutaRed: impresora.rutaRed, nombreImpresora: impresora.nombre }),
+      });
+      const data = await resp.json();
+      if (data.success) {
+        await registrarAuditoria(usuario, "probar_impresora", "impresora", impresora.id, null, { rutaRed: impresora.rutaRed });
+        setResultadoPrueba((prev) => ({ ...prev, [impresora.id]: { tipo: "exito", texto: "Enviada correctamente." } }));
+      } else {
+        setResultadoPrueba((prev) => ({ ...prev, [impresora.id]: { tipo: "error", texto: data.error || "No se pudo imprimir." } }));
+      }
+    } catch (err) {
+      setResultadoPrueba((prev) => ({
+        ...prev,
+        [impresora.id]: { tipo: "error", texto: "No se pudo conectar con el Servidor de Impresión." },
+      }));
+    } finally {
+      setProbandoId(null);
     }
   }
 
@@ -714,6 +752,7 @@ function AdminImpresoras({ usuario }) {
                 <th>Modelo</th>
                 <th>Estado</th>
                 <th></th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -759,6 +798,26 @@ function AdminImpresoras({ usuario }) {
                       >
                         Editar ruta
                       </button>
+                    )}
+                  </td>
+                  <td>
+                    <button
+                      className="boton boton-secundario boton-chico"
+                      onClick={() => probarImpresora(i)}
+                      disabled={probandoId === i.id}
+                    >
+                      {probandoId === i.id ? "Enviando…" : "Probar"}
+                    </button>
+                    {resultadoPrueba[i.id] && (
+                      <div
+                        style={{
+                          fontSize: 11,
+                          marginTop: 4,
+                          color: resultadoPrueba[i.id].tipo === "exito" ? "var(--verde)" : "var(--rojo)",
+                        }}
+                      >
+                        {resultadoPrueba[i.id].texto}
+                      </div>
                     )}
                   </td>
                 </tr>
