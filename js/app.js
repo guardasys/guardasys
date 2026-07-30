@@ -3,6 +3,7 @@ function App() {
   const [firebaseUser, setFirebaseUser] = useState(null);
   const [usuario, setUsuario] = useState(null); // doc de usuarios/{uid} + uid + email
   const [paginaActiva, setPaginaActiva] = useState("inicio");
+  const [terminalConfigurada, setTerminalConfigurada] = useState(obtenerTerminalGuardada());
 
   useEffect(() => {
     const unsub = window.guardaSysAuth.onAuthStateChanged(async (fbUser) => {
@@ -53,6 +54,10 @@ function App() {
         </div>
       </div>
     );
+  }
+
+  if (!terminalConfigurada) {
+    return <ConfigurarTerminal onListo={(id) => setTerminalConfigurada(id)} />;
   }
 
   function renderPagina() {

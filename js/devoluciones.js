@@ -21,6 +21,7 @@ function DevolucionesModule({ usuario }) {
   const [datosTercero, setDatosTercero] = useState({ nombre: "", documento: "", notas: "" });
   const [guardando, setGuardando] = useState(false);
   const [mensaje, setMensaje] = useState(null);
+  const [reimprimiendo, setReimprimiendo] = useState(false);
 
   function reiniciarBusqueda() {
     setResultados([]);
@@ -113,6 +114,18 @@ function DevolucionesModule({ usuario }) {
   function buscar() {
     if (modoBusqueda === "ticket") buscarPorTicket();
     else buscarPorDocumento();
+  }
+
+  async function reimprimirTicket() {
+    setReimprimiendo(true);
+    const resultadoImpresion = await imprimirTicket(operacion);
+    if (resultadoImpresion.success) {
+      await registrarAuditoria(usuario, "reimprimir_ticket", "operacion", operacion.id, null, { codigoTicket: operacion.codigoTicket });
+      setMensaje({ tipo: "exito", texto: "Ticket reimpreso correctamente." });
+    } else {
+      setMensaje({ tipo: "error", texto: `No se pudo reimprimir: ${resultadoImpresion.error}` });
+    }
+    setReimprimiendo(false);
   }
 
   async function confirmarEntrega() {
@@ -218,9 +231,14 @@ function DevolucionesModule({ usuario }) {
         <React.Fragment>
           <div className="panel">
             <h2>Detalle de la guarda</h2>
-            <p>
-              <span className="ticket-codigo">{operacion.codigoTicket}</span>
-            </p>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <p>
+                <span className="ticket-codigo">{operacion.codigoTicket}</span>
+              </p>
+              <button className="boton boton-secundario boton-chico" onClick={reimprimirTicket} disabled={reimprimiendo}>
+                {reimprimiendo ? "Imprimiendo…" : "Reimprimir ticket"}
+              </button>
+            </div>
             <div className="fila-campos" style={{ marginTop: 14 }}>
               <div>
                 <div className="texto-suave" style={{ fontSize: 12 }}>Cliente</div>

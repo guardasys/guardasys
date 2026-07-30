@@ -4,6 +4,47 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 versionado según [SemVer](https://semver.org/lang/es/).
 
+## [0.7.1] - 2026-07-28
+
+### Cambiado
+- La terminal ya **no se elige en Nueva guarda**: ahora es un paso de
+  sesión. Después del login, si esa PC/navegador todavía no tiene una
+  terminal asignada, se muestra una pantalla **"¿Qué terminal es esta
+  PC?"** (una sola vez — el navegador la recuerda). Nueva guarda pasa a
+  derivar el punto de guarda automáticamente a partir de la terminal
+  elegida, en vez de pedirlo por separado — como cada terminal pertenece
+  a un solo punto de guarda, ya no hace falta elegir los dos.
+- Sidebar: se agregó "Terminal: ... (cambiar)" en el pie, para poder
+  reconfigurarla desde cualquier pantalla sin pasar por Nueva guarda.
+
+## [0.7.0] - 2026-07-28
+
+### Agregado
+- **Impresión automática de tickets** (por fin conecta con el Servidor de
+  Impresión de verdad, no solo CPF):
+  - Nueva guarda ahora imprime el ticket automáticamente al registrar la
+    operación. Si falla (impresora apagada, sin red, etc.), la guarda
+    igual queda registrada — se muestra un aviso con botón **"Reintentar
+    impresión"**, sin perder los datos.
+  - Nuevo selector **"Terminal (esta PC)"** en Nueva guarda: cada PC elige
+    una vez qué terminal es (el navegador lo recuerda con localStorage) —
+    así el sistema sabe a qué impresora mandar cada ticket. Antes este
+    dato nunca se completaba (`usuario.terminalId` no existía en ningún
+    lado).
+  - Botón **"Reimprimir ticket"** en Devoluciones, sobre el detalle de la
+    guarda — útil para tickets dañados o que no salieron bien.
+  - Toda impresión (éxito, error, reimpresión) queda en `auditoria`.
+- Nuevo índice compuesto (`terminales`: `puntoGuardaId` + `activo`) para
+  la carga de terminales por punto de guarda.
+
+### Pendiente
+- Confirmar el formato real impreso contra la Epson TM-T20III física
+  (ancho de 48 caracteres y comandos ESC/POS asumidos, no probados
+  todavía con hardware real).
+- Los acentos se transliteran (á→a, ñ→n) para evitar depender de la tabla
+  de caracteres de la impresora sin poder probarla — a revisar según lo
+  que salga en la impresión real.
+
 ## [0.6.2] - 2026-07-28
 
 ### Agregado

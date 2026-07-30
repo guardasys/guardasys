@@ -15,6 +15,14 @@
         { "fieldPath": "accion", "order": "ASCENDING" },
         { "fieldPath": "fechaHora", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "terminales",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "puntoGuardaId", "order": "ASCENDING" },
+        { "fieldPath": "activo", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

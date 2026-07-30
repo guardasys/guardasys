@@ -10,6 +10,9 @@ const ACCIONES_AUDITORIA = [
   "crear_operacion",
   "cerrar_operacion",
   "entrega_sin_ticket",
+  "imprimir_ticket",
+  "reimprimir_ticket",
+  "error_impresion",
   "crear_usuario",
   "editar_usuario",
   "activar_usuario",
@@ -21,6 +24,7 @@ const ACCIONES_AUDITORIA = [
   "activar_terminal",
   "desactivar_terminal",
   "crear_impresora",
+  "editar_impresora",
   "crear_incidencia",
   "resolver_incidencia",
 ];
