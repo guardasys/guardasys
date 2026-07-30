@@ -4,6 +4,13 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 versionado según [SemVer](https://semver.org/lang/es/).
 
+## [0.6.2] - 2026-07-28
+
+### Agregado
+- **Impresoras**: se puede editar la "Ruta de red" directamente desde la
+  tabla (antes solo se podía cargar al crear la impresora, sin forma de
+  corregirla). Queda registrado en auditoría.
+
 ## [0.6.1] - 2026-07-28
 
 ### Corregido

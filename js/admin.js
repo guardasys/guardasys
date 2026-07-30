@@ -582,6 +582,8 @@ function AdminImpresoras({ usuario }) {
   const [mensaje, setMensaje] = useState(null);
   const [guardando, setGuardando] = useState(false);
   const [form, setForm] = useState({ nombre: "", rutaRed: "", terminalId: "", modelo: "Epson TM-T20III" });
+  const [editandoId, setEditandoId] = useState(null);
+  const [rutaEditada, setRutaEditada] = useState("");
 
   function cargarLista() {
     setCargando(true);
@@ -636,6 +638,15 @@ function AdminImpresoras({ usuario }) {
   function nombreTerminal(id) {
     const t = terminales.find((t) => t.id === id);
     return t ? t.codigo : id;
+  }
+
+  async function guardarRutaEditada(impresora) {
+    const nuevaRuta = rutaEditada.trim();
+    if (!nuevaRuta) return;
+    await window.guardaSysDb.collection("impresoras").doc(impresora.id).update({ rutaRed: nuevaRuta });
+    await registrarAuditoria(usuario, "editar_impresora", "impresora", impresora.id, { rutaRed: impresora.rutaRed }, { rutaRed: nuevaRuta });
+    setEditandoId(null);
+    cargarLista();
   }
 
   return (
@@ -702,6 +713,7 @@ function AdminImpresoras({ usuario }) {
                 <th>Ruta de red</th>
                 <th>Modelo</th>
                 <th>Estado</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -709,12 +721,45 @@ function AdminImpresoras({ usuario }) {
                 <tr key={i.id}>
                   <td>{i.nombre}</td>
                   <td>{nombreTerminal(i.terminalId)}</td>
-                  <td><span className="ticket-codigo">{i.rutaRed}</span></td>
+                  <td>
+                    {editandoId === i.id ? (
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <input
+                          value={rutaEditada}
+                          onChange={(e) => setRutaEditada(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && guardarRutaEditada(i)}
+                          style={{ width: 220 }}
+                          autoFocus
+                        />
+                        <button className="boton boton-primario boton-chico" onClick={() => guardarRutaEditada(i)}>
+                          Guardar
+                        </button>
+                        <button className="boton boton-secundario boton-chico" onClick={() => setEditandoId(null)}>
+                          Cancelar
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="ticket-codigo">{i.rutaRed}</span>
+                    )}
+                  </td>
                   <td>{i.modelo}</td>
                   <td>
                     <span className={"estado-badge " + (i.estado === "ok" ? "estado-ok" : "estado-inactivo")}>
                       {i.estado}
                     </span>
+                  </td>
+                  <td>
+                    {editandoId !== i.id && (
+                      <button
+                        className="boton boton-secundario boton-chico"
+                        onClick={() => {
+                          setEditandoId(i.id);
+                          setRutaEditada(i.rutaRed);
+                        }}
+                      >
+                        Editar ruta
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
