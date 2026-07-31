@@ -341,7 +341,7 @@ async function imprimirTicket(operacion) {
           clienteNombre: operacion.clienteSnapshot.nombreCompleto,
           clienteTipoDocumento: operacion.clienteSnapshot.tipoDocumento,
           clienteNumeroDocumento: operacion.clienteSnapshot.numeroDocumento,
-          volumenes: operacion.volumenes.map((v) => ({ tipo: v.tipo, descripcion: v.descripcion })),
+          volumenes: operacion.volumenes.map((v) => ({ tipo: v.tipo, descripcion: v.descripcion, cantidadItems: v.cantidadItems })),
         },
       }),
     });

@@ -4,6 +4,16 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 versionado según [SemVer](https://semver.org/lang/es/).
 
+## [0.7.3] - 2026-07-31
+
+### Corregido
+- El payload que se manda al Servidor de Impresión no incluía
+  `cantidadItems` de cada volumen (solo `tipo` y `descripcion`) — por eso
+  el fix del servidor para imprimir una etiqueta por bulto físico (v0.4.2
+  del servidor) no tenía efecto: el dato nunca llegaba. Corregido en la
+  función compartida `imprimirTicket()`, así queda arreglado tanto en
+  Nueva guarda como en "Reimprimir ticket" de Devoluciones.
+
 ## [0.7.2] - 2026-07-28
 
 ### Agregado
