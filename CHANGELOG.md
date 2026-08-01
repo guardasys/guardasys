@@ -4,6 +4,31 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 versionado según [SemVer](https://semver.org/lang/es/).
 
+## [0.8.0] - 2026-07-31
+
+### Agregado
+- **Foto de referencia (opcional)** en Nueva guarda: con consentimiento
+  explícito del cliente (checkbox), se puede activar la cámara web y
+  sacar una foto que se muestra en Devoluciones al momento del retiro,
+  para que el operador la compare visualmente con la persona que se
+  presenta. **No es reconocimiento facial automático** — el sistema no
+  decide nada, solo muestra la foto lado a lado con los datos del
+  ticket.
+- La foto se guarda en el **disco local del Servidor de Impresión**
+  (nunca en Firestore ni en un servicio en la nube) y se **borra
+  automáticamente** apenas se confirma la devolución — nunca queda
+  guardada la foto de una guarda ya cerrada.
+- Nuevo campo `tieneFoto` (boolean) en `operaciones`, para que
+  Devoluciones sepa si hay que pedir la foto sin intentarlo a ciegas.
+
+### Notas de diseño
+- Se evaluó reconocimiento facial automático (identificación 1:N contra
+  las guardas abiertas) y se decidió no implementarlo por ahora: mayor
+  riesgo (falsos positivos entregarían pertenencias a la persona
+  equivocada), mayor carga legal por el uso más intensivo de datos
+  biométricos, y mayor complejidad. Queda como posible mejora futura,
+  acotada al caso de "ticket perdido" en Incidencias, si hace falta.
+
 ## [0.7.3] - 2026-07-31
 
 ### Corregido

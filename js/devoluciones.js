@@ -22,12 +22,31 @@ function DevolucionesModule({ usuario }) {
   const [guardando, setGuardando] = useState(false);
   const [mensaje, setMensaje] = useState(null);
   const [reimprimiendo, setReimprimiendo] = useState(false);
+  const [fotoUrl, setFotoUrl] = useState(null);
+  const [cargandoFoto, setCargandoFoto] = useState(false);
 
   function reiniciarBusqueda() {
     setResultados([]);
     setOperacion(null);
     setRetiroTercero(false);
     setDatosTercero({ nombre: "", documento: "", notas: "" });
+    if (fotoUrl) URL.revokeObjectURL(fotoUrl);
+    setFotoUrl(null);
+  }
+
+  useEffect(() => {
+    if (!operacion || !operacion.tieneFoto) return;
+    if (!GUARDASYS_SERVIDOR_IMPRESION_URL || GUARDASYS_SERVIDOR_IMPRESION_URL.includes("REEMPLAZAR")) return;
+
+    setCargandoFoto(true);
+    fetch(`${GUARDASYS_SERVIDOR_IMPRESION_URL}/foto-cliente/${operacion.id}`)
+      .then((resp) => (resp.ok ? resp.blob() : null))
+      .then((blob) => {
+        if (blob) setFotoUrl(URL.createObjectURL(blob));
+      })
+      .catch(() => {})
+      .finally(() => setCargandoFoto(false));
+  }, [operacion]);
   }
 
   async function buscarPorTicket() {
@@ -162,6 +181,12 @@ function DevolucionesModule({ usuario }) {
         { estado: "cerrada", entregaSnapshot }
       );
 
+      // La foto de referencia (si existía) se borra apenas se cierra la
+      // guarda — no hay motivo para conservarla más allá de eso.
+      if (operacion.tieneFoto && GUARDASYS_SERVIDOR_IMPRESION_URL && !GUARDASYS_SERVIDOR_IMPRESION_URL.includes("REEMPLAZAR")) {
+        fetch(`${GUARDASYS_SERVIDOR_IMPRESION_URL}/foto-cliente/${operacion.id}`, { method: "DELETE" }).catch(() => {});
+      }
+
       setMensaje({ tipo: "exito", texto: `Guarda ${operacion.codigoTicket} entregada correctamente.` });
       setInputBusqueda("");
       reiniciarBusqueda();
@@ -257,6 +282,21 @@ function DevolucionesModule({ usuario }) {
                 <div>{operacion.operadorNombre}</div>
               </div>
             </div>
+
+            {operacion.tieneFoto && (
+              <div style={{ marginTop: 16 }}>
+                <div className="texto-suave" style={{ fontSize: 12, marginBottom: 6 }}>
+                  Foto de referencia — comparar con la persona que retira
+                </div>
+                {cargandoFoto ? (
+                  <div className="texto-suave">Cargando foto…</div>
+                ) : fotoUrl ? (
+                  <img src={fotoUrl} alt="Foto de referencia del cliente" style={{ width: 160, borderRadius: 8 }} />
+                ) : (
+                  <div className="texto-suave">No se pudo cargar la foto.</div>
+                )}
+              </div>
+            )}
 
             <h2 style={{ marginTop: 20 }}>Volúmenes a entregar</h2>
             {operacion.volumenes.map((v) => (

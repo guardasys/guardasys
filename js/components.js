@@ -1,4 +1,4 @@
-const { useState, useEffect } = React;
+const { useState, useEffect, useRef } = React;
 
 // ============================================================================
 // LOGIN
@@ -388,6 +388,13 @@ function NuevaGuarda({ usuario }) {
   const [volumenes, setVolumenes] = useState([]);
   const [nuevoVolumen, setNuevoVolumen] = useState({ tipo: "valija", descripcion: "", cantidadItems: "" });
 
+  const [consentimientoFoto, setConsentimientoFoto] = useState(false);
+  const [camaraActiva, setCamaraActiva] = useState(false);
+  const [fotoCapturada, setFotoCapturada] = useState(null); // data URL (base64) | null
+  const [errorCamara, setErrorCamara] = useState(null);
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+
   const [guardando, setGuardando] = useState(false);
   const [reintentandoImpresion, setReintentandoImpresion] = useState(false);
   const [mensaje, setMensaje] = useState(null); // {tipo: 'exito'|'advertencia'|'error', texto, codigoTicket?, reintentarImpresion?}
@@ -423,6 +430,51 @@ function NuevaGuarda({ usuario }) {
   function cambiarTerminal() {
     localStorage.removeItem(LLAVE_TERMINAL_LOCAL);
     window.location.reload();
+  }
+
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) streamRef.current.getTracks().forEach((track) => track.stop());
+    };
+  }, []);
+
+  async function activarCamara() {
+    setErrorCamara(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+      streamRef.current = stream;
+      setCamaraActiva(true);
+      // El <video> recién existe después de este render (camaraActiva pasó a true),
+      // así que conectamos el stream en el siguiente tick.
+      setTimeout(() => {
+        if (videoRef.current) videoRef.current.srcObject = stream;
+      }, 0);
+    } catch (err) {
+      setErrorCamara("No se pudo acceder a la cámara (¿hay una conectada? ¿diste el permiso al navegador?).");
+    }
+  }
+
+  function detenerCamara() {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    setCamaraActiva(false);
+  }
+
+  function capturarFoto() {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext("2d").drawImage(video, 0, 0);
+    setFotoCapturada(canvas.toDataURL("image/jpeg", 0.8));
+    detenerCamara();
+  }
+
+  function descartarFoto() {
+    setFotoCapturada(null);
   }
 
   async function reintentarImpresion() {
@@ -604,6 +656,26 @@ function NuevaGuarda({ usuario }) {
 
       const { codigo, operacionParaImprimir } = resultado;
 
+      // Foto de referencia (opcional): se sube después de tener el ID real
+      // de la operación, y directo al Servidor de Impresión (disco local,
+      // no a Firestore/la nube). Si falla, no es motivo para deshacer nada
+      // de lo ya registrado — solo no va a haber foto para comparar luego.
+      if (fotoCapturada && GUARDASYS_SERVIDOR_IMPRESION_URL && !GUARDASYS_SERVIDOR_IMPRESION_URL.includes("REEMPLAZAR")) {
+        try {
+          const respFoto = await fetch(`${GUARDASYS_SERVIDOR_IMPRESION_URL}/foto-cliente`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ operacionId: operacionRef.id, imagenBase64: fotoCapturada }),
+          });
+          const dataFoto = await respFoto.json();
+          if (dataFoto.success) {
+            await operacionRef.update({ tieneFoto: true });
+          }
+        } catch (err) {
+          console.warn("No se pudo guardar la foto de referencia:", err);
+        }
+      }
+
       // La guarda ya quedó registrada en Firestore en este punto — lo que
       // sigue (imprimir) es un paso aparte que puede fallar sin que haya
       // que deshacer nada. Si falla, el operador puede reintentar.
@@ -627,6 +699,8 @@ function NuevaGuarda({ usuario }) {
       setClienteEsNuevo(false);
       setFormCliente({ nombreCompleto: "", nacionalidad: "", telefono: "", email: "" });
       setVolumenes([]);
+      setFotoCapturada(null);
+      setConsentimientoFoto(false);
     } catch (err) {
       console.error(err);
       setMensaje({ tipo: "error", texto: "No se pudo registrar la guarda. Intentá de nuevo." });
@@ -776,7 +850,62 @@ function NuevaGuarda({ usuario }) {
           </div>
 
           <div className="panel">
-            <h2>2. Volúmenes</h2>
+            <h2>2. Foto de referencia (opcional)</h2>
+            <p className="texto-suave" style={{ marginTop: -8, marginBottom: 12 }}>
+              Sirve para comparar visualmente al momento del retiro. Requiere que el cliente lo autorice — la foto
+              se borra automáticamente en cuanto se confirma la devolución.
+            </p>
+
+            {!fotoCapturada && (
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, marginBottom: 12, cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={consentimientoFoto}
+                  onChange={(e) => {
+                    setConsentimientoFoto(e.target.checked);
+                    if (!e.target.checked) detenerCamara();
+                  }}
+                />
+                El cliente autoriza que se le tome una foto con este fin.
+              </label>
+            )}
+
+            {errorCamara && <div className="mensaje-error">{errorCamara}</div>}
+
+            {consentimientoFoto && !fotoCapturada && !camaraActiva && (
+              <button className="boton boton-secundario" onClick={activarCamara}>
+                Activar cámara
+              </button>
+            )}
+
+            {camaraActiva && (
+              <div>
+                <video ref={videoRef} autoPlay playsInline style={{ width: 320, borderRadius: 8, background: "#000" }} />
+                <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
+                  <button className="boton boton-primario" onClick={capturarFoto}>
+                    Capturar foto
+                  </button>
+                  <button className="boton boton-secundario" onClick={detenerCamara}>
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {fotoCapturada && (
+              <div>
+                <img src={fotoCapturada} alt="Foto de referencia" style={{ width: 200, borderRadius: 8 }} />
+                <div style={{ marginTop: 8 }}>
+                  <button className="boton boton-secundario boton-chico" onClick={descartarFoto}>
+                    Volver a tomar
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="panel">
+            <h2>3. Volúmenes</h2>
 
             {volumenes.map((v) => (
               <div className="volumen-item" key={v.volumenId}>
