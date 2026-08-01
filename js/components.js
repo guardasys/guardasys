@@ -366,6 +366,25 @@ function fechaAAAAMMDD(date) {
   return `${y}${m}${d}`;
 }
 
+function generarSegmentoAleatorio(longitud) {
+  let resultado = "";
+  for (let i = 0; i < longitud; i++) resultado += Math.floor(Math.random() * 10);
+  return resultado;
+}
+
+async function generarCodigoTicketUnico(codigoPuntoGuarda) {
+  for (let intento = 0; intento < 5; intento++) {
+    const codigo = `${codigoPuntoGuarda}-${generarSegmentoAleatorio(8)}-${generarSegmentoAleatorio(6)}`;
+    const existe = await window.guardaSysDb
+      .collection("operaciones")
+      .where("codigoTicket", "==", codigo)
+      .limit(1)
+      .get();
+    if (existe.empty) return codigo;
+  }
+  throw new Error("No se pudo generar un código de ticket único. Probá de nuevo.");
+}
+
 function NuevaGuarda({ usuario }) {
   const terminalId = obtenerTerminalGuardada();
   const [puntoGuarda, setPuntoGuarda] = useState(null); // {id, codigo, nombre} — derivado de la terminal
@@ -572,9 +591,15 @@ function NuevaGuarda({ usuario }) {
     setGuardando(true);
     setMensaje(null);
 
-    const fechaStr = fechaAAAAMMDD(new Date());
-    const contadorId = `${puntoGuarda.id}_${fechaStr}`;
-    const contadorRef = window.guardaSysDb.collection("contadores").doc(contadorId);
+    let codigo;
+    try {
+      codigo = await generarCodigoTicketUnico(puntoGuarda.codigo);
+    } catch (err) {
+      setMensaje({ tipo: "error", texto: err.message });
+      setGuardando(false);
+      return;
+    }
+
     const operacionRef = window.guardaSysDb.collection("operaciones").doc();
     const clienteRef = clienteEncontrado
       ? window.guardaSysDb.collection("clientes").doc(clienteEncontrado.id)
@@ -583,12 +608,6 @@ function NuevaGuarda({ usuario }) {
 
     try {
       const resultado = await window.guardaSysDb.runTransaction(async (tx) => {
-        const contadorSnap = await tx.get(contadorRef);
-        const ultimoNumero = contadorSnap.exists ? contadorSnap.data().ultimoNumero : 0;
-        const nuevoNumero = ultimoNumero + 1;
-        const correlativo = String(nuevoNumero).padStart(6, "0");
-        const codigo = `${puntoGuarda.codigo}-${fechaStr}-${correlativo}`;
-
         const timestamp = firebase.firestore.FieldValue.serverTimestamp();
 
         let clienteSnapshot;
@@ -636,8 +655,6 @@ function NuevaGuarda({ usuario }) {
           creadoEn: timestamp,
           actualizadoEn: timestamp,
         });
-
-        tx.set(contadorRef, { ultimoNumero: nuevoNumero });
 
         tx.set(auditoriaRef, {
           usuarioId: usuario.uid,

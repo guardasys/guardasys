@@ -4,6 +4,26 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 versionado según [SemVer](https://semver.org/lang/es/).
 
+## [0.9.0] - 2026-08-01
+
+### Cambiado
+- **Numeración de tickets ahora es aleatoria** en vez de secuencial por
+  fecha. Antes: `PB-20260723-000125` (punto + fecha + correlativo,
+  predecible). Ahora: `2A-12345678-901234` (punto + 8 dígitos al azar +
+  6 dígitos al azar) — mismo largo total, pero ya no se puede adivinar
+  el próximo ticket incrementando el número.
+- Antes de generar cada código se verifica contra Firestore que no
+  exista ya (con reintento, hasta 5 veces) — con 14 dígitos aleatorios
+  la chance de choque es prácticamente nula, pero se verifica igual.
+- La colección `contadores` (correlativo por punto+fecha) queda sin uso
+  — no hace falta borrar los documentos viejos, simplemente no se
+  escriben ni leen más.
+
+### Nota
+- El campo `fecha` sigue imprimiéndose en el ticket como antes (fecha y
+  hora legibles) — lo único que cambió es que ya no forma parte del
+  código del ticket en sí.
+
 ## [0.8.1] - 2026-07-31
 
 ### Corregido
