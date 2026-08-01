@@ -4,6 +4,19 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 versionado según [SemVer](https://semver.org/lang/es/).
 
+## [0.9.1] - 2026-08-01
+
+### Corregido
+- Nueva guarda fallaba siempre con "No se pudo registrar la guarda"
+  (`ReferenceError: Cannot access 'codigo' before initialization`) — al
+  sacar el contador secuencial en la v0.9.0, quedó la variable `codigo`
+  declarada dos veces en el mismo bloque de código, y la segunda
+  declaración tapaba a la primera desde el principio del bloque. No
+  llegué a probar esta ruta con Node antes de entregarla (a diferencia
+  del Servidor de Impresión, donde ya empecé a verificar con `node -c`) —
+  a partir de ahora reviso esto también en los archivos de React aunque
+  no se puedan ejecutar igual de directo.
+
 ## [0.9.0] - 2026-08-01
 
 ### Cambiado

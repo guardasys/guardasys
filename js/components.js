@@ -671,7 +671,7 @@ function NuevaGuarda({ usuario }) {
         return { codigo, operacionParaImprimir: { codigoTicket: codigo, puntoGuardaNombre: puntoGuarda.nombre, clienteSnapshot, volumenes } };
       });
 
-      const { codigo, operacionParaImprimir } = resultado;
+      const { operacionParaImprimir } = resultado;
 
       // Foto de referencia (opcional): se sube después de tener el ID real
       // de la operación, y directo al Servidor de Impresión (disco local,
