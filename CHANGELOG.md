@@ -4,6 +4,15 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 versionado según [SemVer](https://semver.org/lang/es/).
 
+## [0.8.1] - 2026-07-31
+
+### Corregido
+- Devoluciones no cargaba en absoluto (pantalla en blanco,
+  `ReferenceError: DevolucionesModule is not defined`) por una llave `}`
+  de más que quedó del cambio de la foto de referencia, cortando el
+  archivo a la mitad. Nueva guarda no se vio afectada porque el error
+  estaba en `devoluciones.js`, un archivo aparte.
+
 ## [0.8.0] - 2026-07-31
 
 ### Agregado

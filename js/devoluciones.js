@@ -47,7 +47,6 @@ function DevolucionesModule({ usuario }) {
       .catch(() => {})
       .finally(() => setCargandoFoto(false));
   }, [operacion]);
-  }
 
   async function buscarPorTicket() {
     setMensaje(null);
