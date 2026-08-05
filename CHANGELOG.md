@@ -4,6 +4,41 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 versionado según [SemVer](https://semver.org/lang/es/).
 
+## [0.10.0] - 2026-08-05
+
+### Agregado
+- **Autoregistro público de clientes** (`registro-cliente.html`): página
+  nueva, sin login, pensada para abrirse escaneando un QR fijo pegado en
+  el local desde el celular del cliente. Carga tipo/número de documento,
+  nombre y celular (con selector de país con banderita — Brasil, Argentina
+  y Paraguay primero). Disponible en español, portugués e inglés.
+- Si el documento ya existe, no se modifica nada: se muestran los datos
+  ya cargados y se avisa que para corregir algo hay que hablar con el
+  operador en el mostrador.
+- Los clientes creados por esta vía quedan marcados con
+  `origenRegistro: "autoregistro_qr"` para poder diferenciarlos de los
+  cargados por un operador.
+
+### Cambiado — reglas de Firestore
+- `clientes` ahora permite lectura sin login (antes requería ser
+  operador) y creación pública, pero **restringida por reglas a
+  exactamente** `tipoDocumento`, `numeroDocumento`, `nombreCompleto`,
+  `telefono`, `origenRegistro` y `creadoEn`, con validación de tipo,
+  valores permitidos y longitud máxima por campo. No permite editar ni
+  borrar un cliente existente por esta vía — eso sigue siendo solo para
+  operadores.
+
+### ⚠️ Riesgo de seguridad aceptado (decisión explícita del cliente)
+- Para que la página pueda avisar "ya estás registrado" sin pedir login,
+  la lectura de `clientes` quedó abierta a cualquiera con la URL, no solo
+  a quien escaneó el QR del local. En teoría, alguien podría probar
+  números de documento al azar contra esa URL y obtener nombre/teléfono
+  de clientes registrados. Se evaluó una alternativa más segura (buscar
+  por identificador exacto en vez de por consulta abierta, lo que cierra
+  el hueco de raíz) pero se decidió no tocar la lógica de clientes ya
+  probada en producción por ahora. Queda como mejora pendiente si el
+  volumen de clientes o el riesgo percibido crece.
+
 ## [0.9.1] - 2026-08-01
 
 ### Corregido

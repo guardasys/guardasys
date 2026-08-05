@@ -28,6 +28,30 @@ service cloud.firestore {
     function esSupervisor() { return rol() in ["supervisor", "administrador"]; }
     function esAdministrador() { return rol() == "administrador"; }
 
+    // -- autoregistro público de clientes (registro-cliente.html, QR sin
+    // login) — el alta pública queda restringida a EXACTAMENTE estos 6
+    // campos, con validación de tipo/valores/longitud. No permite editar
+    // ni borrar; un cliente ya existente nunca se toca por esta vía.
+    //
+    // Riesgo aceptado (decisión explícita, ver CHANGELOG): la lectura de
+    // /clientes queda abierta a cualquiera sin login, para que la página
+    // pueda avisar "ya estás registrado" antes de crear un duplicado. Esto
+    // significa que alguien que llegue a la URL pública (no solo por el
+    // QR del local) podría consultar nombre/teléfono si prueba números de
+    // documento al azar. Se aceptó este trade-off por simplicidad; si el
+    // volumen de clientes o el riesgo percibido crece, conviene revisar
+    // esto (ver nota técnica en CHANGELOG v0.10.0).
+    function esCreacionPublicaValida() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(["tipoDocumento", "numeroDocumento", "nombreCompleto", "telefono", "origenRegistro", "creadoEn"])
+        && d.tipoDocumento in ["CI", "DNI", "CPF", "Pasaporte", "Otro"]
+        && d.numeroDocumento is string && d.numeroDocumento.size() > 0 && d.numeroDocumento.size() <= 30
+        && d.nombreCompleto is string && d.nombreCompleto.size() > 0 && d.nombreCompleto.size() <= 150
+        && d.telefono is string && d.telefono.size() > 0 && d.telefono.size() <= 30
+        && d.origenRegistro == "autoregistro_qr"
+        && d.creadoEn == request.time;
+    }
+
     // -- usuarios: cada quien lee su propio doc; solo admin gestiona todos --
     match /usuarios/{uid} {
       allow read: if autenticado() && (request.auth.uid == uid || esAdministrador());
@@ -54,7 +78,14 @@ service cloud.firestore {
 
     // -- operación diaria --
     match /clientes/{id} {
-      allow read, create, update: if esOperador();
+      // Lectura abierta a cualquiera (sin login) — ver nota de riesgo
+      // aceptado más arriba, en esCreacionPublicaValida().
+      allow read: if true;
+      // Alta: personal logueado puede cargar cualquier campo; el
+      // autoregistro público solo puede crear con el set de campos
+      // validado (nunca editar uno que ya existe).
+      allow create: if esOperador() || esCreacionPublicaValida();
+      allow update: if esOperador();
       allow delete: if false; // nunca se borra, solo se marca/actualiza
     }
 
