@@ -8,7 +8,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  background: var(--azul-profundo);
+  background: var(--oscuro);
   background-image:
     radial-gradient(circle at 20% 20%, rgba(217, 147, 47, 0.08), transparent 40%),
     radial-gradient(circle at 80% 80%, rgba(217, 147, 47, 0.06), transparent 40%);
@@ -37,12 +37,14 @@
   gap: 2px;
 }
 
-.registro-cliente-header .marca-principal {
-  font-weight: 700;
-  font-size: 18px;
+.registro-cliente-header .marca-logo {
+  height: 20px;
+  width: auto;
+  display: block;
 }
 
 .registro-cliente-header .marca-sub {
+  font-family: var(--fuente-marca);
   font-size: 11px;
   color: var(--texto-suave);
   text-transform: uppercase;
@@ -67,8 +69,8 @@
 
 .selector-idioma button.activo {
   opacity: 1;
-  border-color: var(--ambar);
-  background: var(--ambar-suave);
+  border-color: var(--dorado-marca);
+  background: var(--dorado-marca-suave);
 }
 
 .tarjeta-registro-cliente h1 {

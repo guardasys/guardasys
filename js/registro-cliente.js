@@ -122,7 +122,7 @@ function RegistroCliente() {
       <div className="tarjeta-registro-cliente">
         <div className="registro-cliente-header">
           <div className="marca">
-            <span className="marca-principal">{t.marca}</span>
+            <img src="img/logo-horizontal.png" alt="Paris Store" className="marca-logo" />
             <span className="marca-sub">{t.marcaSub}</span>
           </div>
           <div className="selector-idioma">

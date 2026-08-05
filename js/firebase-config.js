@@ -1,9 +1,10 @@
 // ============================================================================
-// CONFIGURACIÓN DE FIREBASE — GuardaSys (TOKU Importados)
+// CONFIGURACIÓN DE FIREBASE — Paris Store, Guarda de Volúmenes
 // ============================================================================
-// Proyecto de Firebase: guardasys-3a434 (creado exclusivamente para
-// GuardaSys — sin relación con el proyecto de Firebase del Sistema de
-// Inventario ni ningún otro sistema existente).
+// Proyecto de Firebase: guardasys-3a434 (el nombre del proyecto en Firebase
+// quedó igual que al principio del desarrollo — cambiarlo implicaría crear
+// un proyecto nuevo en la consola de Firebase, no es solo un cambio de
+// texto. No afecta nada de cara al usuario, es un identificador interno).
 // ============================================================================
 
 const GUARDASYS_FIREBASE_CONFIG = {

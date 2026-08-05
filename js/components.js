@@ -27,8 +27,8 @@ function Login() {
     <div className="pantalla-login">
       <div className="tarjeta-login">
         <div className="marca">
-          <span className="marca-principal">GuardaSys</span>
-          <span className="marca-sub">TOKU Importados</span>
+          <img src="img/logo-horizontal.png" alt="Paris Store" className="marca-logo" />
+          <span className="marca-sub">Guarda de Volúmenes</span>
         </div>
         <h1>Sistema de Guarda de Volúmenes</h1>
 
@@ -58,7 +58,7 @@ function Login() {
             {cargando ? "Ingresando…" : "Ingresar"}
           </button>
         </form>
-        <div className="version-sistema version-sistema-login">GuardaSys v{GUARDASYS_VERSION}</div>
+        <div className="version-sistema version-sistema-login">Paris Store v{GUARDASYS_VERSION}</div>
       </div>
     </div>
   );
@@ -121,8 +121,8 @@ function ConfigurarTerminal({ onListo }) {
     <div className="pantalla-login">
       <div className="tarjeta-login" style={{ width: 400 }}>
         <div className="marca">
-          <span className="marca-principal">GuardaSys</span>
-          <span className="marca-sub">TOKU Importados</span>
+          <img src="img/logo-horizontal.png" alt="Paris Store" className="marca-logo" />
+          <span className="marca-sub">Guarda de Volúmenes</span>
         </div>
         <h1>¿Qué terminal es esta PC?</h1>
         <p className="texto-suave" style={{ marginTop: -16, marginBottom: 20, fontSize: 13 }}>
@@ -196,8 +196,8 @@ function Sidebar({ usuario, paginaActiva, onNavegar, onCerrarSesion }) {
   return (
     <div className="sidebar">
       <div className="marca">
-        <div className="marca-principal">GuardaSys</div>
-        <div className="marca-sub">TOKU Importados</div>
+        <img src="img/logo-horizontal-claro.png" alt="Paris Store" className="marca-logo" />
+        <div className="marca-sub">Guarda de Volúmenes</div>
       </div>
 
       {items.map((item) => (
@@ -228,7 +228,7 @@ function Sidebar({ usuario, paginaActiva, onNavegar, onCerrarSesion }) {
         <button className="boton boton-secundario" onClick={onCerrarSesion} style={{ width: "100%" }}>
           Cerrar sesión
         </button>
-        <div className="version-sistema">GuardaSys v{GUARDASYS_VERSION}</div>
+        <div className="version-sistema">Paris Store v{GUARDASYS_VERSION}</div>
       </div>
     </div>
   );
@@ -243,7 +243,7 @@ function PanelInicio({ usuario }) {
     <div className="contenido">
       <div className="encabezado-pagina">
         <h1>Hola, {usuario.nombreCompleto || usuario.email}</h1>
-        <p>GuardaSys — Sistema de Guarda de Volúmenes de TOKU Importados</p>
+        <p>Paris Store — Sistema de Guarda de Volúmenes</p>
       </div>
       <div className="panel">
         <h2>Próximos módulos</h2>

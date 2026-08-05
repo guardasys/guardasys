@@ -1,9 +1,9 @@
 // ============================================================================
-// VERSIÓN DEL SISTEMA — GuardaSys (TOKU Importados)
+// VERSIÓN DEL SISTEMA — Paris Store, Guarda de Volúmenes
 // ============================================================================
 // Actualizar este número en cada entrega, junto con CHANGELOG.md.
 // Se muestra en el pie del menú lateral, visible para cualquier usuario
 // logueado (spec original, punto 13: "versión visible en la interfaz").
 // ============================================================================
 
-const GUARDASYS_VERSION = "0.11.0";
+const GUARDASYS_VERSION = "0.12.0";

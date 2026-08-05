@@ -7,8 +7,7 @@
 
 const REGISTRO_CLIENTE_TEXTOS = {
   es: {
-    marca: "GuardaSys",
-    marcaSub: "TOKU Importados",
+    marcaSub: "Guarda de Volúmenes",
     titulo: "Registrate como cliente",
     subtitulo: "Cargá tus datos antes de acercarte al mostrador — así el operador te encuentra al instante.",
     tipoDocumentoLabel: "Tipo de documento",
@@ -38,8 +37,7 @@ const REGISTRO_CLIENTE_TEXTOS = {
     buscarPaisPlaceholder: "Buscar país…",
   },
   pt: {
-    marca: "GuardaSys",
-    marcaSub: "TOKU Importados",
+    marcaSub: "Guarda-Volumes",
     titulo: "Cadastre-se como cliente",
     subtitulo: "Preencha seus dados antes de ir ao balcão — assim o atendente te encontra na hora.",
     tipoDocumentoLabel: "Tipo de documento",
@@ -69,8 +67,7 @@ const REGISTRO_CLIENTE_TEXTOS = {
     buscarPaisPlaceholder: "Buscar país…",
   },
   en: {
-    marca: "GuardaSys",
-    marcaSub: "TOKU Importados",
+    marcaSub: "Luggage Storage",
     titulo: "Register as a customer",
     subtitulo: "Enter your details before heading to the counter — so staff can find you right away.",
     tipoDocumentoLabel: "Document type",

@@ -3,7 +3,7 @@
 // ============================================================================
 // Decisión (confirmada con Paolo): sin contadores mantenidos por ahora.
 // Se leen `operaciones` e `incidencias` del rango de fechas elegido y todo
-// se agrega en el navegador. A la escala actual de TOKU (7-14 puestos) no
+// se agrega en el navegador. A la escala actual de Paris Store (7-14 puestos) no
 // debería notarse lentitud; si en el futuro hace falta, se migra este
 // módulo puntual a contadores sin tocar el resto del sistema.
 //

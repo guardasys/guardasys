@@ -1,4 +1,4 @@
-# GuardaSys — TOKU Importados (Sistema Central)
+# Paris Store — Guarda de Volúmenes (Sistema Central)
 
 Frontend del Sistema Central: React puro vía CDN (sin build), Firebase
 Firestore + Authentication, hosteado en GitHub Pages.
@@ -38,14 +38,20 @@ Con [Firebase CLI](https://firebase.google.com/docs/cli) instalado:
 
 ```bash
 firebase login
-firebase use --add        # elegir el proyecto de GuardaSys
+firebase use --add        # elegir el proyecto de Firebase (guardasys-3a434)
 firebase deploy --only firestore:rules,firestore:indexes
 ```
 
 ## 4. Publicar en GitHub Pages
 
+> **Nota:** el repositorio sigue llamándose `guardasys` a propósito, aunque
+> el sistema ahora se presenta como "Paris Store — Guarda de Volúmenes".
+> El QR impreso en el local apunta a esa URL — cambiar el nombre del repo
+> rompería ese QR. Si en algún momento se decide renombrarlo, hay que
+> reimprimir el QR también.
+
 1. Crear un repositorio nuevo en GitHub llamado `guardasys` (privado o
-   público según defina TOKU) y subir el contenido de esta carpeta a `main`.
+   público según defina Paris Store) y subir el contenido de esta carpeta a `main`.
 2. **Settings → Pages → Source**: rama `main`, carpeta `/ (root)`.
 3. GitHub va a publicar el sitio en
    `https://<usuario-o-org>.github.io/<repo>/`.

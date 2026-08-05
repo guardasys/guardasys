@@ -2,7 +2,7 @@
 // PAÍSES / CÓDIGOS TELEFÓNICOS — selector con banderita para el módulo
 // público de autoregistro de clientes.
 // Brasil, Argentina y Paraguay van primero (los tres países de donde viene
-// la enorme mayoría de los clientes de TOKU); el resto queda ordenado
+// la enorme mayoría de los clientes de Paris Store); el resto queda ordenado
 // alfabéticamente por nombre debajo, para buscar rápido si hace falta.
 // ============================================================================
 

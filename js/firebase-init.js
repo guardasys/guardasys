@@ -1,5 +1,5 @@
 // ============================================================================
-// INICIALIZACIÓN DE FIREBASE — GuardaSys (TOKU Importados)
+// INICIALIZACIÓN DE FIREBASE — Paris Store, Guarda de Volúmenes
 // ============================================================================
 // Como no usamos bundler/ES modules, exponemos las instancias como globals
 // (window.guardaSysDb, window.guardaSysAuth) para que los componentes React

@@ -1,8 +1,47 @@
-# Changelog — GuardaSys (TOKU Importados)
+# Changelog — Paris Store, Guarda de Volúmenes
 
 Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 versionado según [SemVer](https://semver.org/lang/es/).
+
+## [0.12.0] - 2026-08-05
+
+### Cambiado — identidad visual completa (Paris Store)
+- El sistema pasa a presentarse como **"Paris Store — Guarda de
+  Volúmenes"** en toda la interfaz (login, barra lateral, módulo público
+  de autoregistro, título de las páginas). Reemplaza el nombre "GuardaSys"
+  y la marca "TOKU Importados" en todo lo que ve el usuario.
+- Se incorporó el logo oficial de Paris Store (dos variantes: apilada y
+  horizontal), extraído de los archivos de marca provistos, en
+  `img/logo-horizontal.png` y `img/logo-apilado.png` — y una versión en
+  dorado de cada una (`-claro.png`) para usar sobre fondos oscuros, como
+  la barra lateral.
+- Paleta de colores actualizada a los tres colores oficiales de marca,
+  extraídos directamente del material provisto:
+  - **Paris Rouge** `#D6003A` — acento principal (antes el ámbar cumplía
+    ese rol; ahora los botones principales y la navegación activa son
+    rojo de marca).
+  - **Paris Doré** `#DFB77E` — acento secundario (foco de campos,
+    etiqueta de ticket, pestaña activa).
+  - **Paris Blanc** `#F1F1F2` — tono neutro claro.
+  - Gris carbón `#262626` en vez del azul marino anterior para la barra
+    lateral y el login — el azul no forma parte de la identidad de Paris
+    Store.
+- Se agregó la tipografía **Poppins** (Google Fonts) para los textos de
+  marca, junto a Inter que se mantiene para el resto de la interfaz.
+- El rojo de error/advertencia (`--rojo`, `#c94b3f`) se mantuvo
+  **deliberadamente distinto** del rojo de marca (`#D6003A`), para no
+  confundir "acción principal" con "advertencia/error" en la misma
+  pantalla.
+
+### Sin cambios (a propósito)
+- El repositorio de GitHub Pages sigue en `guardasys.github.io/guardasys/`
+  y el proyecto de Firebase sigue siendo `guardasys-3a434` — cambiar
+  cualquiera de los dos es un paso de infraestructura aparte (y el
+  primero, además, invalidaría el QR ya impreso del autoregistro). Los
+  nombres internos de variables (`GUARDASYS_VERSION`,
+  `window.guardaSysDb`, etc.) tampoco se tocaron — son invisibles para
+  el usuario y renombrarlos no traía ningún beneficio real.
 
 ## [0.11.0] - 2026-08-05
 
