@@ -17,61 +17,7 @@
 // el QR en el local. Ver mensaje al usuario.
 // ============================================================================
 
-const TIPOS_DOCUMENTO_PUBLICO = ["CI", "DNI", "CPF", "Pasaporte", "Otro"];
-
-function SelectorPais({ pais, setPais, idioma }) {
-  const [abierto, setAbierto] = React.useState(false);
-  const [busqueda, setBusqueda] = React.useState("");
-  const t = REGISTRO_CLIENTE_TEXTOS[idioma];
-
-  const filtrados = PAISES_TELEFONO.filter((p) =>
-    p.nombre.toLowerCase().includes(busqueda.toLowerCase())
-  );
-
-  return (
-    <div className="selector-pais">
-      <button
-        type="button"
-        className="selector-pais-boton"
-        onClick={() => setAbierto((v) => !v)}
-      >
-        <span className="selector-pais-bandera">{pais.bandera}</span>
-        <span>{pais.indicativo}</span>
-        <span className="selector-pais-flecha">▾</span>
-      </button>
-      {abierto && (
-        <div className="selector-pais-lista">
-          <input
-            type="text"
-            className="selector-pais-buscar"
-            placeholder={t.buscarPaisPlaceholder}
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            autoFocus
-          />
-          <div className="selector-pais-opciones">
-            {filtrados.map((p) => (
-              <button
-                type="button"
-                key={p.iso}
-                className="selector-pais-opcion"
-                onClick={() => {
-                  setPais(p);
-                  setAbierto(false);
-                  setBusqueda("");
-                }}
-              >
-                <span className="selector-pais-bandera">{p.bandera}</span>
-                <span className="selector-pais-opcion-nombre">{p.nombre}</span>
-                <span className="selector-pais-opcion-indicativo">{p.indicativo}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+const TIPOS_DOCUMENTO_PUBLICO = ["CPF", "CI", "DNI", "Pasaporte", "Otro"];
 
 function RegistroCliente() {
   const [idioma, setIdioma] = React.useState("pt");
@@ -279,7 +225,7 @@ function RegistroCliente() {
             <div className="campo">
               <label>{t.telefonoLabel}</label>
               <div className="campo-telefono">
-                <SelectorPais pais={pais} setPais={setPais} idioma={idioma} />
+                <SelectorPais pais={pais} setPais={setPais} placeholder={t.buscarPaisPlaceholder} />
                 <input
                   type="tel"
                   inputMode="tel"

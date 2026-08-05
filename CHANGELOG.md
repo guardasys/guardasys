@@ -4,6 +4,23 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 versionado según [SemVer](https://semver.org/lang/es/).
 
+## [0.11.0] - 2026-08-05
+
+### Cambiado
+- Orden del tipo de documento (en Nueva Guarda y en el autoregistro
+  público) ahora es **CPF, CI, DNI, Pasaporte, Otro** — CPF primero, ya
+  que es el documento más común entre los clientes.
+- Nueva Guarda: el formulario de cliente nuevo ya no pide **nacionalidad**
+  ni **email** — solo nombre completo y teléfono.
+- Nueva Guarda: el campo Teléfono ahora usa el mismo selector de país con
+  bandera que el autoregistro público (Brasil, Argentina y Paraguay
+  primero), en vez de un campo de texto libre.
+
+### Interno
+- El selector de país (`SelectorPais`) se movió a un archivo compartido
+  (`js/selector-pais.js`) para no duplicar el componente entre Nueva
+  Guarda y el módulo público — ambos ya lo usan igual.
+
 ## [0.10.1] - 2026-08-05
 
 ### Cambiado

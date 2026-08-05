@@ -262,7 +262,7 @@ function PanelInicio({ usuario }) {
 // ============================================================================
 
 const TIPOS_VOLUMEN = ["valija", "bolsa", "compra", "otro"];
-const TIPOS_DOCUMENTO = ["CI", "DNI", "CPF", "Pasaporte", "Otro"];
+const TIPOS_DOCUMENTO = ["CPF", "CI", "DNI", "Pasaporte", "Otro"];
 
 // ============================================================================
 // IMPRESIÓN — helpers compartidos por Nueva guarda, Devoluciones e Incidencias
@@ -399,10 +399,9 @@ function NuevaGuarda({ usuario }) {
   const [clienteEsNuevo, setClienteEsNuevo] = useState(false);
   const [formCliente, setFormCliente] = useState({
     nombreCompleto: "",
-    nacionalidad: "",
     telefono: "",
-    email: "",
   });
+  const [paisTelefono, setPaisTelefono] = useState(PAISES_PRIORITARIOS[0]); // Brasil por defecto
 
   const [volumenes, setVolumenes] = useState([]);
   const [nuevoVolumen, setNuevoVolumen] = useState({ tipo: "valija", descripcion: "", cantidadItems: "" });
@@ -622,9 +621,7 @@ function NuevaGuarda({ usuario }) {
             nombreCompleto: formCliente.nombreCompleto.trim(),
             tipoDocumento,
             numeroDocumento: numeroDocumento.trim(),
-            nacionalidad: formCliente.nacionalidad.trim() || null,
-            telefono: formCliente.telefono.trim() || null,
-            email: formCliente.email.trim() || null,
+            telefono: formCliente.telefono.trim() ? `${paisTelefono.indicativo} ${formCliente.telefono.trim()}` : null,
             notas: null,
             creadoEn: timestamp,
             actualizadoEn: timestamp,
@@ -714,7 +711,8 @@ function NuevaGuarda({ usuario }) {
       setNumeroDocumento("");
       setClienteEncontrado(null);
       setClienteEsNuevo(false);
-      setFormCliente({ nombreCompleto: "", nacionalidad: "", telefono: "", email: "" });
+      setFormCliente({ nombreCompleto: "", telefono: "" });
+      setPaisTelefono(PAISES_PRIORITARIOS[0]);
       setVolumenes([]);
       setFotoCapturada(null);
       setConsentimientoFoto(false);
@@ -839,26 +837,13 @@ function NuevaGuarda({ usuario }) {
                     )}
                   </div>
                 </div>
-                <div className="fila-campos">
-                  <div className="campo">
-                    <label>Nacionalidad</label>
-                    <input
-                      value={formCliente.nacionalidad}
-                      onChange={(e) => setFormCliente({ ...formCliente, nacionalidad: e.target.value })}
-                    />
-                  </div>
-                  <div className="campo">
-                    <label>Teléfono</label>
+                <div className="campo" style={{ marginBottom: 14 }}>
+                  <label>Teléfono</label>
+                  <div className="campo-telefono">
+                    <SelectorPais pais={paisTelefono} setPais={setPaisTelefono} placeholder="Buscar país…" />
                     <input
                       value={formCliente.telefono}
                       onChange={(e) => setFormCliente({ ...formCliente, telefono: e.target.value })}
-                    />
-                  </div>
-                  <div className="campo">
-                    <label>Email</label>
-                    <input
-                      value={formCliente.email}
-                      onChange={(e) => setFormCliente({ ...formCliente, email: e.target.value })}
                     />
                   </div>
                 </div>

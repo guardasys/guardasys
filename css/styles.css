@@ -137,6 +137,108 @@ button {
 .boton-secundario { background: var(--fondo); color: var(--texto); border: 1px solid var(--borde); }
 .boton-peligro { background: var(--rojo); color: #fff; }
 
+/* -- teléfono con selector de país (bandera + indicativo) — usado en
+   Nueva Guarda y en el módulo público de autoregistro -- */
+
+.campo-telefono {
+  display: flex;
+  gap: 8px;
+}
+
+.campo-telefono input {
+  flex: 1;
+}
+
+.selector-pais {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.selector-pais-boton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  padding: 10px 10px;
+  border: 1px solid var(--borde);
+  border-radius: 6px;
+  background: var(--fondo);
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.selector-pais-bandera {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.selector-pais-flecha {
+  color: var(--texto-suave);
+  font-size: 11px;
+}
+
+.selector-pais-lista {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 20;
+  width: 260px;
+  max-width: 80vw;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+
+.selector-pais-buscar {
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-bottom: 1px solid var(--borde);
+  font-size: 14px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.selector-pais-buscar:focus {
+  outline: none;
+  background: var(--fondo);
+}
+
+.selector-pais-opciones {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.selector-pais-opcion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  background: none;
+  font-size: 13px;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.selector-pais-opcion:hover {
+  background: var(--fondo);
+}
+
+.selector-pais-opcion-nombre {
+  flex: 1;
+}
+
+.selector-pais-opcion-indicativo {
+  color: var(--texto-suave);
+}
+
 .error-login {
   background: #fbeceb;
   color: var(--rojo);
