@@ -74,7 +74,7 @@ function SelectorPais({ pais, setPais, idioma }) {
 }
 
 function RegistroCliente() {
-  const [idioma, setIdioma] = React.useState("es");
+  const [idioma, setIdioma] = React.useState("pt");
   const t = REGISTRO_CLIENTE_TEXTOS[idioma];
 
   const [paso, setPaso] = React.useState("buscar"); // buscar | ya-registrado | nuevo | exito
@@ -86,7 +86,27 @@ function RegistroCliente() {
   const [numeroCelular, setNumeroCelular] = React.useState("");
   const [pais, setPais] = React.useState(PAISES_PRIORITARIOS[0]);
   const [registrando, setRegistrando] = React.useState(false);
+  const [buscandoNombreCpf, setBuscandoNombreCpf] = React.useState(false);
   const [error, setError] = React.useState(null);
+
+  async function buscarNombrePorCpf(numero) {
+    if (typeof GUARDASYS_SERVIDOR_IMPRESION_URL === "undefined") return;
+    setBuscandoNombreCpf(true);
+    try {
+      const resp = await fetch(`${GUARDASYS_SERVIDOR_IMPRESION_URL}/consultar-cpf/${numero}`);
+      const data = await resp.json();
+      if (data.success && data.nombre) {
+        setNombreCompleto(data.nombre);
+      }
+    } catch (err) {
+      // Sin drama: si no se puede llegar al servidor (ej. el cliente no
+      // está conectado al wifi del local), el cliente completa el nombre
+      // a mano y listo.
+      console.warn("No se pudo autocompletar el nombre por CPF:", err);
+    } finally {
+      setBuscandoNombreCpf(false);
+    }
+  }
 
   async function continuar() {
     if (!numeroDocumento.trim()) return;
@@ -105,6 +125,9 @@ function RegistroCliente() {
         setPaso("ya-registrado");
       } else {
         setPaso("nuevo");
+        if (tipoDocumento === "CPF") {
+          buscarNombrePorCpf(numeroDocumento.trim());
+        }
       }
     } catch (err) {
       console.error(err);
@@ -158,18 +181,18 @@ function RegistroCliente() {
           </div>
           <div className="selector-idioma">
             <button
-              className={idioma === "es" ? "activo" : ""}
-              onClick={() => setIdioma("es")}
-              aria-label="Español"
-            >
-              🇪🇸
-            </button>
-            <button
               className={idioma === "pt" ? "activo" : ""}
               onClick={() => setIdioma("pt")}
               aria-label="Português"
             >
               🇧🇷
+            </button>
+            <button
+              className={idioma === "es" ? "activo" : ""}
+              onClick={() => setIdioma("es")}
+              aria-label="Español"
+            >
+              🇪🇸
             </button>
             <button
               className={idioma === "en" ? "activo" : ""}
@@ -251,6 +274,7 @@ function RegistroCliente() {
                 value={nombreCompleto}
                 onChange={(e) => setNombreCompleto(e.target.value)}
               />
+              {buscandoNombreCpf && <p className="registro-cliente-aviso">{t.buscandoNombreCpf}</p>}
             </div>
             <div className="campo">
               <label>{t.telefonoLabel}</label>

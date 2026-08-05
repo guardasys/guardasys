@@ -4,6 +4,25 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 versionado según [SemVer](https://semver.org/lang/es/).
 
+## [0.10.1] - 2026-08-05
+
+### Cambiado
+- Autoregistro público: idioma por defecto ahora es **portugués**
+  (antes español), con el orden de banderas 🇧🇷 → 🇪🇸 → 🇬🇧.
+- Etiqueta de tipo de documento simplificada a solo "CI" en los tres
+  idiomas (antes decía "Cédula (CI)").
+
+### Agregado
+- Cuando el documento es CPF, el nombre se busca automáticamente en la
+  misma API que ya usa Nueva Guarda (vía el Servidor de Impresión), igual
+  que en la pantalla interna — el cliente ve su nombre precargado y solo
+  lo confirma o corrige.
+- Nota: esa búsqueda solo funciona si el celular del cliente está
+  conectado a la red/wifi del local (el Servidor de Impresión es interno,
+  no accesible desde datos móviles). Si no hay conexión, el cliente
+  completa el nombre a mano sin ningún error visible — no se nota como
+  falla, solo no se autocompleta.
+
 ## [0.10.0] - 2026-08-05
 
 ### Agregado
