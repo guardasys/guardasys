@@ -4,6 +4,11 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 versionado según [SemVer](https://semver.org/lang/es/).
 
+## [0.12.1] - 2026-08-05
+
+### Agregado
+- Nuevo tipo de volumen: **Mochila**.
+
 ## [0.12.0] - 2026-08-05
 
 ### Cambiado — identidad visual completa (Paris Store)

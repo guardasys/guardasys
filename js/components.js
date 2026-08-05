@@ -261,7 +261,7 @@ function PanelInicio({ usuario }) {
 // NUEVA GUARDA — módulo funcional: registrar cliente + volúmenes + ticket
 // ============================================================================
 
-const TIPOS_VOLUMEN = ["valija", "bolsa", "compra", "otro"];
+const TIPOS_VOLUMEN = ["valija", "bolsa", "mochila", "compra", "otro"];
 const TIPOS_DOCUMENTO = ["CPF", "CI", "DNI", "Pasaporte", "Otro"];
 
 // ============================================================================
