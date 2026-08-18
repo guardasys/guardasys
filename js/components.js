@@ -252,7 +252,7 @@ function puntoEnCirculo(cx, cy, r, anguloGrados) {
   return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
 }
 
-function GraficoCircular({ datos, textoVacio }) {
+function GraficoCircular({ datos, textoVacio, etiquetaTotal }) {
   const total = datos.reduce((acc, [, valor]) => acc + valor, 0);
 
   if (total === 0) {
@@ -272,31 +272,38 @@ function GraficoCircular({ datos, textoVacio }) {
   const r = 95;
 
   return (
-    <div className="grafico-circular-contenedor">
-      <svg viewBox="0 0 200 200" className="grafico-circular-svg">
-        {sectores.length === 1 ? (
-          <circle cx={cx} cy={cy} r={r} fill={sectores[0].color} />
-        ) : (
-          sectores.map((s, idx) => {
-            const p1 = puntoEnCirculo(cx, cy, r, s.anguloInicio);
-            const p2 = puntoEnCirculo(cx, cy, r, s.anguloFin);
-            const arcoGrande = s.anguloFin - s.anguloInicio > 180 ? 1 : 0;
-            const d = `M ${cx} ${cy} L ${p1.x.toFixed(2)} ${p1.y.toFixed(2)} A ${r} ${r} 0 ${arcoGrande} 1 ${p2.x.toFixed(2)} ${p2.y.toFixed(2)} Z`;
-            return <path key={idx} d={d} fill={s.color} stroke="#ffffff" strokeWidth="1.5" />;
-          })
-        )}
-      </svg>
-      <div className="grafico-circular-leyenda">
-        {sectores.map((s, idx) => (
-          <div key={idx} className="grafico-circular-item">
-            <span className="grafico-circular-punto" style={{ background: s.color }}></span>
-            <span>{s.etiqueta}</span>
-            <span className="texto-suave">
-              ({s.valor} · {Math.round((s.valor / total) * 100)}%)
-            </span>
-          </div>
-        ))}
+    <div>
+      <div className="grafico-circular-contenedor">
+        <svg viewBox="0 0 200 200" className="grafico-circular-svg">
+          {sectores.length === 1 ? (
+            <circle cx={cx} cy={cy} r={r} fill={sectores[0].color} />
+          ) : (
+            sectores.map((s, idx) => {
+              const p1 = puntoEnCirculo(cx, cy, r, s.anguloInicio);
+              const p2 = puntoEnCirculo(cx, cy, r, s.anguloFin);
+              const arcoGrande = s.anguloFin - s.anguloInicio > 180 ? 1 : 0;
+              const d = `M ${cx} ${cy} L ${p1.x.toFixed(2)} ${p1.y.toFixed(2)} A ${r} ${r} 0 ${arcoGrande} 1 ${p2.x.toFixed(2)} ${p2.y.toFixed(2)} Z`;
+              return <path key={idx} d={d} fill={s.color} stroke="#ffffff" strokeWidth="1.5" />;
+            })
+          )}
+        </svg>
+        <div className="grafico-circular-leyenda">
+          {sectores.map((s, idx) => (
+            <div key={idx} className="grafico-circular-item">
+              <span className="grafico-circular-punto" style={{ background: s.color }}></span>
+              <span>{s.etiqueta}</span>
+              <span className="texto-suave">
+                ({s.valor} · {Math.round((s.valor / total) * 100)}%)
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
+      {etiquetaTotal && (
+        <div className="grafico-circular-total">
+          {etiquetaTotal}: <strong>{total}</strong>
+        </div>
+      )}
     </div>
   );
 }
@@ -348,7 +355,7 @@ function PanelInicio({ usuario }) {
           <p className="texto-suave" style={{ marginTop: -8, marginBottom: 12 }}>
             Con fecha de ingreso hoy.
           </p>
-          {cargando ? <div className="cargando">Cargando…</div> : <GraficoCircular datos={porPuntoHoy} textoVacio="Todavía no se registraron guardas hoy." />}
+          {cargando ? <div className="cargando">Cargando…</div> : <GraficoCircular datos={porPuntoHoy} textoVacio="Todavía no se registraron guardas hoy." etiquetaTotal="Guardas registradas" />}
         </div>
 
         <div className="panel">
@@ -356,7 +363,7 @@ function PanelInicio({ usuario }) {
           <p className="texto-suave" style={{ marginTop: -8, marginBottom: 12 }}>
             Guardas abiertas ahora mismo.
           </p>
-          {cargando ? <div className="cargando">Cargando…</div> : <GraficoCircular datos={ocupacionPorPunto} textoVacio="No hay guardas abiertas en este momento." />}
+          {cargando ? <div className="cargando">Cargando…</div> : <GraficoCircular datos={ocupacionPorPunto} textoVacio="No hay guardas abiertas en este momento." etiquetaTotal="Ocupación actual por punto de guarda" />}
         </div>
       </div>
     </div>

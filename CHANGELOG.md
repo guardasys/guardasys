@@ -4,6 +4,13 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 versionado según [SemVer](https://semver.org/lang/es/).
 
+## [0.15.1] - 2026-08-18
+
+### Agregado
+- Cada gráfico circular de Inicio ahora muestra el total debajo (ej.
+  "Guardas registradas: 342"), para tener noción de la magnitud detrás de
+  los porcentajes de la leyenda.
+
 ## [0.15.0] - 2026-08-18
 
 ### Agregado

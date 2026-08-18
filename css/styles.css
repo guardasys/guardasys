@@ -639,6 +639,19 @@ button {
   font-size: 13px;
 }
 
+.grafico-circular-total {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--borde);
+  font-size: 14px;
+  color: var(--texto-suave);
+}
+.grafico-circular-total strong {
+  color: var(--texto);
+  font-family: var(--fuente-mono);
+  font-size: 18px;
+}
+
 .grafico-circular-punto {
   width: 11px;
   height: 11px;
