@@ -4,6 +4,19 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 versionado según [SemVer](https://semver.org/lang/es/).
 
+## [0.14.0] - 2026-08-18
+
+### Agregado
+- **Detalle clickeable en Reportes.** Las 5 tarjetas de "Resumen del
+  período" (Guardas registradas, Volúmenes, Clientes distintos, Cerradas,
+  Abiertas al cierre del período) ahora se pueden clickear para ver el
+  listado detrás de cada número: ticket, cliente, punto, fechas, etc.
+  Todo se arma con los datos que Reportes ya tenía cargados en memoria —
+  no se agregó ninguna consulta nueva a Firestore. Un segundo click sobre
+  la misma tarjeta (o el botón "Cerrar") oculta el detalle. "Tiempo
+  promedio de guarda" no es clickeable — es un promedio, no tiene un
+  listado propio detrás.
+
 ## [0.13.1] - 2026-08-08
 
 ### Corregido

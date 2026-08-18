@@ -592,3 +592,15 @@ button {
   color: var(--texto-suave);
   margin-top: 4px;
 }
+
+.metrica-clicable {
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.metrica-clicable:hover {
+  border-color: var(--dorado-marca);
+}
+.metrica-activa {
+  border-color: var(--rojo-marca);
+  background: #fff5f7;
+}

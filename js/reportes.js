@@ -61,10 +61,12 @@ function ReportesModule() {
   const [operaciones, setOperaciones] = useState(null);
   const [incidencias, setIncidencias] = useState(null);
   const [ocupacionActual, setOcupacionActual] = useState(null);
+  const [detalle, setDetalle] = useState(null); // null | "guardas" | "volumenes" | "clientes" | "cerradas" | "abiertas"
 
   async function generarReporte() {
     setCargando(true);
     setMensaje(null);
+    setDetalle(null);
     try {
       const desde = firebase.firestore.Timestamp.fromDate(inicioDelDia(fechaDesde));
       const hasta = firebase.firestore.Timestamp.fromDate(finDelDia(fechaHasta));
@@ -114,6 +116,55 @@ function ReportesModule() {
   const incidenciasPorTipo = incidencias ? contarPor(incidencias, (i) => etiquetaTipoIncidencia(i.tipo)) : [];
   const ocupacionPorPunto = ocupacionActual ? contarPor(ocupacionActual, (op) => op.puntoGuardaNombre) : [];
 
+  // ---- Detalle por métrica (todo derivado de `operaciones`, ya en memoria) ----
+  const porFechaIngresoDesc = (lista) => lista.slice().sort((a, b) => (b.fechaIngreso.seconds || 0) - (a.fechaIngreso.seconds || 0));
+
+  const detalleGuardas = operaciones ? porFechaIngresoDesc(operaciones) : [];
+  const detalleCerradas = operaciones ? porFechaIngresoDesc(cerradas) : [];
+  const detalleAbiertas = operaciones ? porFechaIngresoDesc(operaciones.filter((op) => op.estado === "abierta")) : [];
+
+  const detalleVolumenes = operaciones
+    ? operaciones.flatMap((op) =>
+        (op.volumenes || []).map((v, idx) => ({
+          key: `${op.id}-${idx}`,
+          ticket: op.codigoTicket,
+          cliente: op.clienteSnapshot ? op.clienteSnapshot.nombreCompleto : "—",
+          tipo: v.tipo ? v.tipo.charAt(0).toUpperCase() + v.tipo.slice(1) : "—",
+          descripcion: v.descripcion || "—",
+        }))
+      )
+    : [];
+
+  const detalleClientes = operaciones
+    ? Object.values(
+        operaciones.reduce((acc, op) => {
+          const clave = op.clienteId || (op.clienteSnapshot && op.clienteSnapshot.numeroDocumento) || op.id;
+          if (!acc[clave]) {
+            acc[clave] = {
+              key: clave,
+              nombre: op.clienteSnapshot ? op.clienteSnapshot.nombreCompleto : "—",
+              documento: op.clienteSnapshot ? `${op.clienteSnapshot.tipoDocumento} ${op.clienteSnapshot.numeroDocumento}` : "—",
+              cantidad: 0,
+            };
+          }
+          acc[clave].cantidad += 1;
+          return acc;
+        }, {})
+      ).sort((a, b) => b.cantidad - a.cantidad)
+    : [];
+
+  const TITULOS_DETALLE = {
+    guardas: "Detalle — Guardas registradas",
+    volumenes: "Detalle — Volúmenes",
+    clientes: "Detalle — Clientes distintos",
+    cerradas: "Detalle — Cerradas (entregadas)",
+    abiertas: "Detalle — Abiertas al cierre del período",
+  };
+
+  function alternarDetalle(clave) {
+    setDetalle((actual) => (actual === clave ? null : clave));
+  }
+
   return (
     <div className="contenido">
       <div className="encabezado-pagina">
@@ -147,23 +198,23 @@ function ReportesModule() {
           <div className="panel">
             <h2>Resumen del período</h2>
             <div className="grilla-metricas">
-              <div className="metrica">
+              <div className={`metrica metrica-clicable ${detalle === "guardas" ? "metrica-activa" : ""}`} onClick={() => alternarDetalle("guardas")}>
                 <div className="metrica-valor">{totalOperaciones}</div>
                 <div className="metrica-etiqueta">Guardas registradas</div>
               </div>
-              <div className="metrica">
+              <div className={`metrica metrica-clicable ${detalle === "volumenes" ? "metrica-activa" : ""}`} onClick={() => alternarDetalle("volumenes")}>
                 <div className="metrica-valor">{totalVolumenes}</div>
                 <div className="metrica-etiqueta">Volúmenes</div>
               </div>
-              <div className="metrica">
+              <div className={`metrica metrica-clicable ${detalle === "clientes" ? "metrica-activa" : ""}`} onClick={() => alternarDetalle("clientes")}>
                 <div className="metrica-valor">{clientesUnicos}</div>
                 <div className="metrica-etiqueta">Clientes distintos</div>
               </div>
-              <div className="metrica">
+              <div className={`metrica metrica-clicable ${detalle === "cerradas" ? "metrica-activa" : ""}`} onClick={() => alternarDetalle("cerradas")}>
                 <div className="metrica-valor">{cerradas.length}</div>
                 <div className="metrica-etiqueta">Cerradas (entregadas)</div>
               </div>
-              <div className="metrica">
+              <div className={`metrica metrica-clicable ${detalle === "abiertas" ? "metrica-activa" : ""}`} onClick={() => alternarDetalle("abiertas")}>
                 <div className="metrica-valor">{abiertas}</div>
                 <div className="metrica-etiqueta">Abiertas al cierre del período</div>
               </div>
@@ -174,6 +225,160 @@ function ReportesModule() {
             </div>
           </div>
 
+          {/* ---- Panel de detalle (se abre al hacer click en una métrica de arriba) ---- */}
+          {detalle && (
+            <div className="panel">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <h2 style={{ margin: 0 }}>{TITULOS_DETALLE[detalle]}</h2>
+                <button className="boton boton-secundario boton-chico" style={{ width: "auto", padding: "6px 14px" }} onClick={() => setDetalle(null)}>
+                  Cerrar
+                </button>
+              </div>
+
+              {detalle === "guardas" && (
+                detalleGuardas.length === 0 ? (
+                  <p className="texto-suave">Sin datos en este período.</p>
+                ) : (
+                  <table className="tabla-admin">
+                    <thead>
+                      <tr>
+                        <th>Ticket</th>
+                        <th>Cliente</th>
+                        <th>Punto</th>
+                        <th>Operador</th>
+                        <th>Fecha ingreso</th>
+                        <th>Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {detalleGuardas.map((op) => (
+                        <tr key={op.id}>
+                          <td style={{ whiteSpace: "nowrap" }}>{op.codigoTicket}</td>
+                          <td>{op.clienteSnapshot ? op.clienteSnapshot.nombreCompleto : "—"}</td>
+                          <td>{op.puntoGuardaNombre}</td>
+                          <td>{op.operadorNombre}</td>
+                          <td style={{ whiteSpace: "nowrap" }}>{formatearFechaHora(op.fechaIngreso)}</td>
+                          <td>{op.estado === "abierta" ? "Abierta" : "Cerrada"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )
+              )}
+
+              {detalle === "volumenes" && (
+                detalleVolumenes.length === 0 ? (
+                  <p className="texto-suave">Sin datos en este período.</p>
+                ) : (
+                  <table className="tabla-admin">
+                    <thead>
+                      <tr>
+                        <th>Ticket</th>
+                        <th>Cliente</th>
+                        <th>Tipo</th>
+                        <th>Descripción</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {detalleVolumenes.map((v) => (
+                        <tr key={v.key}>
+                          <td style={{ whiteSpace: "nowrap" }}>{v.ticket}</td>
+                          <td>{v.cliente}</td>
+                          <td>{v.tipo}</td>
+                          <td>{v.descripcion}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )
+              )}
+
+              {detalle === "clientes" && (
+                detalleClientes.length === 0 ? (
+                  <p className="texto-suave">Sin datos en este período.</p>
+                ) : (
+                  <table className="tabla-admin">
+                    <thead>
+                      <tr>
+                        <th>Cliente</th>
+                        <th>Documento</th>
+                        <th>Guardas en el período</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {detalleClientes.map((c) => (
+                        <tr key={c.key}>
+                          <td>{c.nombre}</td>
+                          <td>{c.documento}</td>
+                          <td>{c.cantidad}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )
+              )}
+
+              {detalle === "cerradas" && (
+                detalleCerradas.length === 0 ? (
+                  <p className="texto-suave">Sin datos en este período.</p>
+                ) : (
+                  <table className="tabla-admin">
+                    <thead>
+                      <tr>
+                        <th>Ticket</th>
+                        <th>Cliente</th>
+                        <th>Punto</th>
+                        <th>Fecha ingreso</th>
+                        <th>Fecha egreso</th>
+                        <th>Duración</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {detalleCerradas.map((op) => (
+                        <tr key={op.id}>
+                          <td style={{ whiteSpace: "nowrap" }}>{op.codigoTicket}</td>
+                          <td>{op.clienteSnapshot ? op.clienteSnapshot.nombreCompleto : "—"}</td>
+                          <td>{op.puntoGuardaNombre}</td>
+                          <td style={{ whiteSpace: "nowrap" }}>{formatearFechaHora(op.fechaIngreso)}</td>
+                          <td style={{ whiteSpace: "nowrap" }}>{formatearFechaHora(op.fechaEgreso)}</td>
+                          <td>{formatearDuracion(minutosEntre(op.fechaIngreso, op.fechaEgreso))}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )
+              )}
+
+              {detalle === "abiertas" && (
+                detalleAbiertas.length === 0 ? (
+                  <p className="texto-suave">Sin datos en este período.</p>
+                ) : (
+                  <table className="tabla-admin">
+                    <thead>
+                      <tr>
+                        <th>Ticket</th>
+                        <th>Cliente</th>
+                        <th>Punto</th>
+                        <th>Fecha ingreso</th>
+                        <th>Días abierta</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {detalleAbiertas.map((op) => (
+                        <tr key={op.id}>
+                          <td style={{ whiteSpace: "nowrap" }}>{op.codigoTicket}</td>
+                          <td>{op.clienteSnapshot ? op.clienteSnapshot.nombreCompleto : "—"}</td>
+                          <td>{op.puntoGuardaNombre}</td>
+                          <td style={{ whiteSpace: "nowrap" }}>{formatearFechaHora(op.fechaIngreso)}</td>
+                          <td>{diasAbierta(op.fechaIngreso)} día(s)</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )
+              )}
+            </div>
+          )}
           {/* ---- Ocupación actual (en tiempo real, no depende del rango de fechas) ---- */}
           <div className="panel">
             <h2>Ocupación actual por punto de guarda</h2>
