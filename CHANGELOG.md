@@ -4,6 +4,20 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 versionado según [SemVer](https://semver.org/lang/es/).
 
+## [0.13.1] - 2026-08-08
+
+### Corregido
+- La app se rompía por completo ("TypeError: c is not a function") al salir
+  de la pestaña Cierre masivo hacia cualquier otra (ej. Impresoras). Causa:
+  `cargar` estaba declarada `async` y se pasó directo a `useEffect(cargar, [])`
+  — React toma lo que devuelve la función del efecto como "función de
+  limpieza" al desmontar, y una función `async` siempre devuelve una
+  Promise, no `undefined`. React intentaba ejecutar esa Promise como si
+  fuera una función al cambiar de pestaña, y explotaba. Se corrigió
+  envolviendo la llamada en una función síncrona: `useEffect(() => { cargar(); }, [])`
+  — mismo patrón que ya se usaba en el resto del sistema (`admin.js`,
+  `auditoria.js`, `incidencias.js`), que por eso nunca tuvo este problema.
+
 ## [0.13.0] - 2026-08-08
 
 ### Agregado

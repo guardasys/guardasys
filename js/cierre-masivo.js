@@ -59,7 +59,9 @@ function CierreMasivoModule({ usuario }) {
     }
   }
 
-  useEffect(cargar, []);
+  useEffect(() => {
+    cargar();
+  }, []);
 
   function toggleSeleccion(id) {
     setSeleccionadas((prev) => {
