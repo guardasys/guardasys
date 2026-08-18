@@ -238,20 +238,126 @@ function Sidebar({ usuario, paginaActiva, onNavegar, onCerrarSesion }) {
 // PANEL DE INICIO (placeholder — se completa con métricas reales más adelante)
 // ============================================================================
 
+// ============================================================================
+// GRÁFICO CIRCULAR — componente genérico, sin librerías externas (SVG a mano)
+// ============================================================================
+// Recibe `datos` en el mismo formato que devuelve `contarPor()` de
+// reportes.js: [ [etiqueta, valor], [etiqueta, valor], ... ].
+// ============================================================================
+
+const PALETA_GRAFICO_CIRCULAR = ["#d6003a", "#dfb77e", "#262626", "#5b8a9a", "#7a9b5e", "#a86b9e", "#b0752f", "#4a6fa5"];
+
+function puntoEnCirculo(cx, cy, r, anguloGrados) {
+  const rad = ((anguloGrados - 90) * Math.PI) / 180; // -90: que 0° apunte hacia arriba
+  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+}
+
+function GraficoCircular({ datos, textoVacio }) {
+  const total = datos.reduce((acc, [, valor]) => acc + valor, 0);
+
+  if (total === 0) {
+    return <p className="texto-suave">{textoVacio || "Sin datos."}</p>;
+  }
+
+  let anguloAcumulado = 0;
+  const sectores = datos.map(([etiqueta, valor], idx) => {
+    const anguloInicio = anguloAcumulado;
+    const anguloFin = anguloAcumulado + (valor / total) * 360;
+    anguloAcumulado = anguloFin;
+    return { etiqueta, valor, anguloInicio, anguloFin, color: PALETA_GRAFICO_CIRCULAR[idx % PALETA_GRAFICO_CIRCULAR.length] };
+  });
+
+  const cx = 100;
+  const cy = 100;
+  const r = 95;
+
+  return (
+    <div className="grafico-circular-contenedor">
+      <svg viewBox="0 0 200 200" className="grafico-circular-svg">
+        {sectores.length === 1 ? (
+          <circle cx={cx} cy={cy} r={r} fill={sectores[0].color} />
+        ) : (
+          sectores.map((s, idx) => {
+            const p1 = puntoEnCirculo(cx, cy, r, s.anguloInicio);
+            const p2 = puntoEnCirculo(cx, cy, r, s.anguloFin);
+            const arcoGrande = s.anguloFin - s.anguloInicio > 180 ? 1 : 0;
+            const d = `M ${cx} ${cy} L ${p1.x.toFixed(2)} ${p1.y.toFixed(2)} A ${r} ${r} 0 ${arcoGrande} 1 ${p2.x.toFixed(2)} ${p2.y.toFixed(2)} Z`;
+            return <path key={idx} d={d} fill={s.color} stroke="#ffffff" strokeWidth="1.5" />;
+          })
+        )}
+      </svg>
+      <div className="grafico-circular-leyenda">
+        {sectores.map((s, idx) => (
+          <div key={idx} className="grafico-circular-item">
+            <span className="grafico-circular-punto" style={{ background: s.color }}></span>
+            <span>{s.etiqueta}</span>
+            <span className="texto-suave">
+              ({s.valor} · {Math.round((s.valor / total) * 100)}%)
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function PanelInicio({ usuario }) {
+  const [cargando, setCargando] = useState(true);
+  const [mensaje, setMensaje] = useState(null);
+  const [porPuntoHoy, setPorPuntoHoy] = useState([]);
+  const [ocupacionPorPunto, setOcupacionPorPunto] = useState([]);
+
+  useEffect(() => {
+    async function cargar() {
+      setCargando(true);
+      setMensaje(null);
+      try {
+        const hoy = hoyISO();
+        const desde = firebase.firestore.Timestamp.fromDate(inicioDelDia(hoy));
+        const hasta = firebase.firestore.Timestamp.fromDate(finDelDia(hoy));
+
+        const [snapHoy, snapAbiertas] = await Promise.all([
+          window.guardaSysDb.collection("operaciones").where("fechaIngreso", ">=", desde).where("fechaIngreso", "<=", hasta).get(),
+          window.guardaSysDb.collection("operaciones").where("estado", "==", "abierta").get(),
+        ]);
+
+        setPorPuntoHoy(contarPor(snapHoy.docs.map((d) => d.data()), (op) => op.puntoGuardaNombre));
+        setOcupacionPorPunto(contarPor(snapAbiertas.docs.map((d) => d.data()), (op) => op.puntoGuardaNombre));
+      } catch (err) {
+        console.error(err);
+        setMensaje({ tipo: "error", texto: "No se pudieron cargar los indicadores de Inicio." });
+      } finally {
+        setCargando(false);
+      }
+    }
+    cargar();
+  }, []);
+
   return (
     <div className="contenido">
       <div className="encabezado-pagina">
         <h1>Hola, {usuario.nombreCompleto || usuario.email}</h1>
         <p>Paris Store — Sistema de Guarda de Volúmenes</p>
       </div>
-      <div className="panel">
-        <h2>Próximos módulos</h2>
-        <p className="texto-suave">
-          Este es el primer recorte funcional. Los módulos de Devoluciones,
-          Incidencias, Reportes, Administración y Auditoría se suman de
-          forma iterativa, como en el proyecto de Inventario.
-        </p>
+
+      {mensaje && <div className="mensaje-error">{mensaje.texto}</div>}
+
+      <div className="grilla-graficos">
+        <div className="panel">
+          <h2>Guardas registradas por punto</h2>
+          <p className="texto-suave" style={{ marginTop: -8, marginBottom: 12 }}>
+            Con fecha de ingreso hoy.
+          </p>
+          {cargando ? <div className="cargando">Cargando…</div> : <GraficoCircular datos={porPuntoHoy} textoVacio="Todavía no se registraron guardas hoy." />}
+        </div>
+
+        <div className="panel">
+          <h2>Ocupación actual por punto de guarda</h2>
+          <p className="texto-suave" style={{ marginTop: -8, marginBottom: 12 }}>
+            Guardas abiertas ahora mismo.
+          </p>
+          {cargando ? <div className="cargando">Cargando…</div> : <GraficoCircular datos={ocupacionPorPunto} textoVacio="No hay guardas abiertas en este momento." />}
+        </div>
       </div>
     </div>
   );

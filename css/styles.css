@@ -604,3 +604,44 @@ button {
   border-color: var(--rojo-marca);
   background: #fff5f7;
 }
+
+.grilla-graficos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 14px;
+}
+
+.grafico-circular-contenedor {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.grafico-circular-svg {
+  width: 160px;
+  height: 160px;
+  flex-shrink: 0;
+}
+
+.grafico-circular-leyenda {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-width: 160px;
+}
+
+.grafico-circular-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.grafico-circular-punto {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}

@@ -4,6 +4,21 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 versionado según [SemVer](https://semver.org/lang/es/).
 
+## [0.15.0] - 2026-08-18
+
+### Agregado
+- **Inicio con gráficos circulares.** La pantalla de Inicio ya no muestra
+  el texto fijo de "Próximos módulos" (quedó obsoleto desde hace rato, ya
+  están todos los módulos armados) — ahora muestra dos gráficos
+  circulares lado a lado: "Guardas registradas por punto" (con fecha de
+  ingreso hoy) y "Ocupación actual por punto de guarda" (guardas abiertas
+  ahora mismo, en vivo). Cada gráfico tiene su leyenda con cantidad y
+  porcentaje al lado.
+- Nuevo componente reutilizable `GraficoCircular` (SVG hecho a mano, sin
+  agregar ninguna librería externa — sigue la misma filosofía liviana del
+  resto del proyecto) en `js/components.js`, listo para reusarse en otras
+  pantallas si hace falta más adelante.
+
 ## [0.14.0] - 2026-08-18
 
 ### Agregado
