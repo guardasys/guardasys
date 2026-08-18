@@ -22,6 +22,7 @@ const PESTAÑAS_ADMIN = [
   { id: "puntosGuarda", etiqueta: "Puntos de guarda" },
   { id: "terminales", etiqueta: "Terminales" },
   { id: "impresoras", etiqueta: "Impresoras" },
+  { id: "cierreMasivo", etiqueta: "Cierre masivo" },
 ];
 
 function AdministracionModule({ usuario }) {
@@ -50,6 +51,7 @@ function AdministracionModule({ usuario }) {
       {pestaña === "puntosGuarda" && <AdminPuntosGuarda usuario={usuario} />}
       {pestaña === "terminales" && <AdminTerminales usuario={usuario} />}
       {pestaña === "impresoras" && <AdminImpresoras usuario={usuario} />}
+      {pestaña === "cierreMasivo" && <CierreMasivoModule usuario={usuario} />}
     </div>
   );
 }

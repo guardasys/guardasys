@@ -6,4 +6,4 @@
 // logueado (spec original, punto 13: "versión visible en la interfaz").
 // ============================================================================
 
-const GUARDASYS_VERSION = "0.12.1";
+const GUARDASYS_VERSION = "0.13.0";

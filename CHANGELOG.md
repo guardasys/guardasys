@@ -4,6 +4,21 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 versionado según [SemVer](https://semver.org/lang/es/).
 
+## [0.13.0] - 2026-08-08
+
+### Agregado
+- **Cierre masivo de operaciones vencidas.** Nueva pestaña "Cierre masivo"
+  en Administración: lista las operaciones que quedaron con estado
+  "abierta" de días anteriores a hoy (a propósito no incluye las de hoy,
+  que todavía pueden estar guardadas de verdad) y permite seleccionarlas
+  y cerrarlas en bloque, con un paso de confirmación antes de ejecutar.
+  Pensado para corregir guardas que quedaron abiertas por error de carga
+  o porque el cliente retiró sin pasar por Devoluciones — no reemplaza el
+  flujo normal de Devoluciones para una entrega real.
+- Cada cierre masivo queda registrado en Auditoría con la acción
+  `cierre_masivo_operacion`, igual que una entrega normal pero
+  distinguible en el historial.
+
 ## [0.12.1] - 2026-08-05
 
 ### Agregado
