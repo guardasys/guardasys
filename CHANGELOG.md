@@ -4,6 +4,33 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 versionado según [SemVer](https://semver.org/lang/es/).
 
+## [0.16.0] - 2026-08-22
+
+### Agregado
+- **Ubicación física por box.** Cada punto de guarda tiene una matriz de
+  4 filas (A-D) x 10 columnas, con 2 lugares por box. Al registrar una
+  guarda, cada volumen recibe automáticamente su box (el primer libre,
+  recorriendo A1→A10, B1→B10...). Las valijas no entran en la matriz por
+  tamaño: van directo al mueble **F**. Si la matriz ya está llena,
+  cualquier otro volumen también desborda a F.
+- El cálculo de ocupación se hace dentro de la misma transacción de
+  Firestore que crea la operación, así que dos terminales registrando al
+  mismo tiempo en el mismo punto nunca terminan asignadas al mismo box
+  (Firestore reintenta la que pierde la carrera).
+- El box asignado ahora se ve en: la pantalla de Nueva guarda al
+  confirmar el registro, el tiket impreso (una línea por volumen), la
+  etiqueta que se pega sobre cada bulto (destacado, es el dato principal
+  de esa etiqueta), la pantalla de Devoluciones al buscar un tiket, y el
+  detalle de "Volúmenes" en Reportes (nueva columna "Box").
+
+### Nota técnica
+- Las guardas que ya estaban abiertas antes de esta actualización no
+  tienen `ubicacion` guardada — no cuentan para calcular la ocupación de
+  la matriz hasta que se cierren. En la práctica no debería notarse
+  (las guardas abiertas se van cerrando en el uso normal), pero vale
+  saberlo si en los primeros días después del despliegue algún box
+  parece "más libre" de lo que se ve físicamente.
+
 ## [0.15.1] - 2026-08-18
 
 ### Agregado

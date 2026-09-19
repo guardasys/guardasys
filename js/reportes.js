@@ -131,6 +131,7 @@ function ReportesModule() {
           cliente: op.clienteSnapshot ? op.clienteSnapshot.nombreCompleto : "—",
           tipo: v.tipo ? v.tipo.charAt(0).toUpperCase() + v.tipo.slice(1) : "—",
           descripcion: v.descripcion || "—",
+          ubicacion: formatearUbicacion(v.ubicacion),
         }))
       )
     : [];
@@ -277,6 +278,7 @@ function ReportesModule() {
                         <th>Cliente</th>
                         <th>Tipo</th>
                         <th>Descripción</th>
+                        <th>Box</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -286,6 +288,7 @@ function ReportesModule() {
                           <td>{v.cliente}</td>
                           <td>{v.tipo}</td>
                           <td>{v.descripcion}</td>
+                          <td style={{ whiteSpace: "nowrap" }}>{v.ubicacion}</td>
                         </tr>
                       ))}
                     </tbody>

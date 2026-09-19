@@ -378,6 +378,57 @@ const TIPOS_VOLUMEN = ["valija", "bolsa", "mochila", "compra", "otro"];
 const TIPOS_DOCUMENTO = ["CPF", "CI", "DNI", "Pasaporte", "Otro"];
 
 // ============================================================================
+// UBICACIÓN FÍSICA — matriz de boxes por punto de guarda
+// ============================================================================
+// Cada punto de guarda tiene un mueble "matriz" con 4 filas (A-D) x 10
+// columnas = 40 boxes, cada uno con lugar para 2 volúmenes. Las valijas no
+// entran en la matriz por tamaño: van directo al mueble "F" (un solo
+// espacio, sin subdivisiones). Si la matriz ya está llena, cualquier otro
+// volumen también cae en F como desborde.
+//
+// La asignación es automática (primer box libre, recorriendo A1→A10,
+// B1→B10, ...) y se calcula en el momento de registrar, dentro de la
+// misma transacción de Firestore que crea la operación — así, si dos
+// operadores registran al mismo tiempo en el mismo punto, Firestore hace
+// reintentar la transacción que pierde la carrera en vez de que ambas
+// terminen asignadas al mismo box.
+// ============================================================================
+
+const FILAS_MATRIZ_BOXES = ["A", "B", "C", "D"];
+const COLUMNAS_MATRIZ_BOXES = 10;
+const CAPACIDAD_POR_BOX = 2;
+
+/**
+ * Recorre la matriz en orden fijo y devuelve el primer box con lugar
+ * libre. Si tipo es "valija", o si la matriz está completa, devuelve F.
+ * Muta `ocupacion` (clave "FilaColumna" -> cantidad ocupada) para que
+ * volúmenes siguientes de la MISMA operación (ej. 2 bolsas en la misma
+ * guarda) no compitan por el mismo box ya elegido acá.
+ */
+function asignarUbicacionVolumen(tipo, ocupacion) {
+  if (tipo === "valija") return { mueble: "F" };
+
+  for (const fila of FILAS_MATRIZ_BOXES) {
+    for (let columna = 1; columna <= COLUMNAS_MATRIZ_BOXES; columna++) {
+      const clave = `${fila}${columna}`;
+      const ocupados = ocupacion[clave] || 0;
+      if (ocupados < CAPACIDAD_POR_BOX) {
+        ocupacion[clave] = ocupados + 1;
+        return { mueble: "matriz", fila, columna };
+      }
+    }
+  }
+  return { mueble: "F" }; // Matriz llena: desborde a F
+}
+
+/** Texto corto para mostrar en pantalla, tiket y etiqueta: "B-07" o "F". */
+function formatearUbicacion(ubicacion) {
+  if (!ubicacion) return "—";
+  if (ubicacion.mueble === "F") return "F";
+  return `${ubicacion.fila}-${String(ubicacion.columna).padStart(2, "0")}`;
+}
+
+// ============================================================================
 // IMPRESIÓN — helpers compartidos por Nueva guarda, Devoluciones e Incidencias
 // ============================================================================
 // Cada PC "recuerda" en localStorage qué terminal es (se elige una vez,
@@ -454,7 +505,12 @@ async function imprimirTicket(operacion) {
           clienteNombre: operacion.clienteSnapshot.nombreCompleto,
           clienteTipoDocumento: operacion.clienteSnapshot.tipoDocumento,
           clienteNumeroDocumento: operacion.clienteSnapshot.numeroDocumento,
-          volumenes: operacion.volumenes.map((v) => ({ tipo: v.tipo, descripcion: v.descripcion, cantidadItems: v.cantidadItems })),
+          volumenes: operacion.volumenes.map((v) => ({
+            tipo: v.tipo,
+            descripcion: v.descripcion,
+            cantidadItems: v.cantidadItems,
+            ubicacionTexto: formatearUbicacion(v.ubicacion),
+          })),
         },
       }),
     });
@@ -681,7 +737,6 @@ function NuevaGuarda({ usuario }) {
         tipo: nuevoVolumen.tipo,
         descripcion: nuevoVolumen.descripcion.trim(),
         cantidadItems: nuevoVolumen.cantidadItems ? Number(nuevoVolumen.cantidadItems) : null,
-        ubicacionFisica: null,
         fotoUrl: null,
       },
     ]);
@@ -722,6 +777,33 @@ function NuevaGuarda({ usuario }) {
       const resultado = await window.guardaSysDb.runTransaction(async (tx) => {
         const timestamp = firebase.firestore.FieldValue.serverTimestamp();
 
+        // Ocupación actual de la matriz de ESTE punto de guarda: se lee
+        // dentro de la transacción (no antes) para que, si dos terminales
+        // registran a la vez en el mismo punto, Firestore detecte el
+        // conflicto y reintente la transacción que perdió la carrera —
+        // así nunca quedan dos guardas apuntando al mismo box.
+        // Un solo filtro (estado=="abierta"), sin componer con
+        // puntoGuardaId, para no necesitar un índice compuesto nuevo — el
+        // filtro por punto se hace en JS, mismo criterio que ya usamos en
+        // Reportes, Inicio y Cierre masivo.
+        const snapAbiertas = await tx.get(window.guardaSysDb.collection("operaciones").where("estado", "==", "abierta"));
+        const ocupacionBoxes = {};
+        snapAbiertas.docs.forEach((doc) => {
+          const op = doc.data();
+          if (op.puntoGuardaId !== puntoGuarda.id) return;
+          (op.volumenes || []).forEach((v) => {
+            if (v.ubicacion && v.ubicacion.mueble === "matriz") {
+              const clave = `${v.ubicacion.fila}${v.ubicacion.columna}`;
+              ocupacionBoxes[clave] = (ocupacionBoxes[clave] || 0) + 1;
+            }
+          });
+        });
+
+        const volumenesConUbicacion = volumenes.map((v) => ({
+          ...v,
+          ubicacion: asignarUbicacionVolumen(v.tipo, ocupacionBoxes),
+        }));
+
         let clienteSnapshot;
         if (clienteEncontrado) {
           clienteSnapshot = {
@@ -757,7 +839,7 @@ function NuevaGuarda({ usuario }) {
           operadorId: usuario.uid,
           operadorNombre: usuario.nombreCompleto || usuario.email,
           estado: "abierta",
-          volumenes,
+          volumenes: volumenesConUbicacion,
           fechaIngreso: timestamp,
           fechaEgreso: null,
           entregadoPor: null,
@@ -778,7 +860,10 @@ function NuevaGuarda({ usuario }) {
           datosDespues: { codigoTicket: codigo, clienteId: clienteRef.id, puntoGuardaId: puntoGuarda.id },
         });
 
-        return { codigo, operacionParaImprimir: { codigoTicket: codigo, puntoGuardaNombre: puntoGuarda.nombre, clienteSnapshot, volumenes } };
+        return {
+          codigo,
+          operacionParaImprimir: { codigoTicket: codigo, puntoGuardaNombre: puntoGuarda.nombre, clienteSnapshot, volumenes: volumenesConUbicacion },
+        };
       });
 
       const { operacionParaImprimir } = resultado;
@@ -807,15 +892,20 @@ function NuevaGuarda({ usuario }) {
       // sigue (imprimir) es un paso aparte que puede fallar sin que haya
       // que deshacer nada. Si falla, el operador puede reintentar.
       const resultadoImpresion = await imprimirTicket(operacionParaImprimir);
+      const ubicaciones = operacionParaImprimir.volumenes.map((v) => ({
+        descripcion: v.descripcion,
+        ubicacionTexto: formatearUbicacion(v.ubicacion),
+      }));
       if (resultadoImpresion.success) {
         await registrarAuditoria(usuario, "imprimir_ticket", "operacion", null, null, { codigoTicket: codigo });
-        setMensaje({ tipo: "exito", texto: "Guarda registrada e impresa correctamente.", codigoTicket: codigo });
+        setMensaje({ tipo: "exito", texto: "Guarda registrada e impresa correctamente.", codigoTicket: codigo, ubicaciones });
       } else {
         await registrarAuditoria(usuario, "error_impresion", "operacion", null, null, { codigoTicket: codigo, error: resultadoImpresion.error });
         setMensaje({
           tipo: "advertencia",
           texto: `Guarda registrada, pero no se pudo imprimir: ${resultadoImpresion.error}`,
           codigoTicket: codigo,
+          ubicaciones,
           reintentarImpresion: operacionParaImprimir,
         });
       }
@@ -848,12 +938,30 @@ function NuevaGuarda({ usuario }) {
         <div className="mensaje-exito">
           {mensaje.texto}{" "}
           {mensaje.codigoTicket && <span className="ticket-codigo">{mensaje.codigoTicket}</span>}
+          {mensaje.ubicaciones && mensaje.ubicaciones.length > 0 && (
+            <div style={{ marginTop: 8 }}>
+              {mensaje.ubicaciones.map((u, i) => (
+                <div key={i} style={{ fontSize: 13 }}>
+                  {u.descripcion}: <strong>Box {u.ubicacionTexto}</strong>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
       {mensaje && mensaje.tipo === "advertencia" && (
         <div className="mensaje-error">
           {mensaje.texto}{" "}
           {mensaje.codigoTicket && <span className="ticket-codigo">{mensaje.codigoTicket}</span>}
+          {mensaje.ubicaciones && mensaje.ubicaciones.length > 0 && (
+            <div style={{ marginTop: 8 }}>
+              {mensaje.ubicaciones.map((u, i) => (
+                <div key={i} style={{ fontSize: 13 }}>
+                  {u.descripcion}: <strong>Box {u.ubicacionTexto}</strong>
+                </div>
+              ))}
+            </div>
+          )}
           {mensaje.reintentarImpresion && (
             <div style={{ marginTop: 8 }}>
               <button className="boton boton-secundario boton-chico" onClick={reintentarImpresion} disabled={reintentandoImpresion}>
