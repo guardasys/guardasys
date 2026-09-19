@@ -773,36 +773,42 @@ function NuevaGuarda({ usuario }) {
       : window.guardaSysDb.collection("clientes").doc();
     const auditoriaRef = window.guardaSysDb.collection("auditoria").doc();
 
+    // Ocupación actual de la matriz de ESTE punto de guarda. Se calcula
+    // ACÁ, antes de la transacción — no dentro de ella — porque
+    // Transaction.get() en esta versión del SDK solo acepta referencias a
+    // documentos puntuales, no queries (probado: tiraba
+    // "Expected type 'F', but it was a custom Z1 object" al intentarlo).
+    // Un solo filtro (estado=="abierta"), sin componer con puntoGuardaId,
+    // para no necesitar un índice compuesto nuevo — el filtro por punto
+    // se hace en JS, mismo criterio que ya usamos en Reportes, Inicio y
+    // Cierre masivo.
+    //
+    // Nota: al no ir dentro de la transacción, queda la remota
+    // posibilidad de que dos terminales del mismo punto registren en el
+    // mismo instante y les toque el mismo box — mismo tipo de riesgo
+    // aceptado que ya existe en otras partes del sistema (no usamos
+    // transacciones en todos lados). Si en la práctica esto llega a
+    // pasar, se puede revisar más adelante.
+    const snapAbiertas = await window.guardaSysDb.collection("operaciones").where("estado", "==", "abierta").get();
+    const ocupacionBoxes = {};
+    snapAbiertas.docs.forEach((doc) => {
+      const op = doc.data();
+      if (op.puntoGuardaId !== puntoGuarda.id) return;
+      (op.volumenes || []).forEach((v) => {
+        if (v.ubicacion && v.ubicacion.mueble === "matriz") {
+          const clave = `${v.ubicacion.fila}${v.ubicacion.columna}`;
+          ocupacionBoxes[clave] = (ocupacionBoxes[clave] || 0) + 1;
+        }
+      });
+    });
+    const volumenesConUbicacion = volumenes.map((v) => ({
+      ...v,
+      ubicacion: asignarUbicacionVolumen(v.tipo, ocupacionBoxes),
+    }));
+
     try {
       const resultado = await window.guardaSysDb.runTransaction(async (tx) => {
         const timestamp = firebase.firestore.FieldValue.serverTimestamp();
-
-        // Ocupación actual de la matriz de ESTE punto de guarda: se lee
-        // dentro de la transacción (no antes) para que, si dos terminales
-        // registran a la vez en el mismo punto, Firestore detecte el
-        // conflicto y reintente la transacción que perdió la carrera —
-        // así nunca quedan dos guardas apuntando al mismo box.
-        // Un solo filtro (estado=="abierta"), sin componer con
-        // puntoGuardaId, para no necesitar un índice compuesto nuevo — el
-        // filtro por punto se hace en JS, mismo criterio que ya usamos en
-        // Reportes, Inicio y Cierre masivo.
-        const snapAbiertas = await tx.get(window.guardaSysDb.collection("operaciones").where("estado", "==", "abierta"));
-        const ocupacionBoxes = {};
-        snapAbiertas.docs.forEach((doc) => {
-          const op = doc.data();
-          if (op.puntoGuardaId !== puntoGuarda.id) return;
-          (op.volumenes || []).forEach((v) => {
-            if (v.ubicacion && v.ubicacion.mueble === "matriz") {
-              const clave = `${v.ubicacion.fila}${v.ubicacion.columna}`;
-              ocupacionBoxes[clave] = (ocupacionBoxes[clave] || 0) + 1;
-            }
-          });
-        });
-
-        const volumenesConUbicacion = volumenes.map((v) => ({
-          ...v,
-          ubicacion: asignarUbicacionVolumen(v.tipo, ocupacionBoxes),
-        }));
 
         let clienteSnapshot;
         if (clienteEncontrado) {

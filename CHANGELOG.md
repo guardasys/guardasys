@@ -4,6 +4,24 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 versionado según [SemVer](https://semver.org/lang/es/).
 
+## [0.16.1] - 2026-09-19
+
+### Corregido
+- **Bug crítico: no se podía registrar ninguna guarda** desde la
+  v0.16.0. El cálculo de ocupación de boxes usaba `tx.get(query)` dentro
+  de la transacción de Firestore, para blindar contra dos registros
+  simultáneos — pero esta versión del SDK (modo compat) no soporta leer
+  una query dentro de una transacción, solo documentos puntuales por
+  referencia. Tiraba `FirebaseError: Expected type 'F', but it was a
+  custom Z1 object` y la operación nunca se guardaba (por eso tampoco
+  imprimía nada: no había ticket que imprimir).
+  Solución: el cálculo de ocupación se mueve a **antes** de la
+  transacción, como una consulta normal. La transacción vuelve a tener
+  solo escrituras. Se pierde la protección extra contra dos terminales
+  registrando en el mismo instante en el mismo punto — vuelve a ser el
+  mismo tipo de riesgo aceptado que ya existe en otras partes del
+  sistema (remoto, y no bloqueante para seguir usando el sistema).
+
 ## [0.16.0] - 2026-08-22
 
 ### Agregado
