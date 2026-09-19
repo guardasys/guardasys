@@ -381,44 +381,58 @@ const TIPOS_DOCUMENTO = ["CPF", "CI", "DNI", "Pasaporte", "Otro"];
 // UBICACIÓN FÍSICA — matriz de boxes por punto de guarda
 // ============================================================================
 // Cada punto de guarda tiene un mueble "matriz" con 4 filas (A-D) x 10
-// columnas = 40 boxes, cada uno con lugar para 2 volúmenes. Las maletas no
-// entran en la matriz por tamaño: van directo al mueble "F" (un solo
-// espacio, sin subdivisiones). Si la matriz ya está llena, cualquier otro
-// volumen también cae en F como desborde.
+// columnas = 40 boxes. Cada box es de UN SOLO CLIENTE por vez — se ocupa
+// entero apenas se le asigna a una guarda, y recién se libera cuando esa
+// guarda se cierra (Devoluciones o Cierre masivo).
 //
-// La asignación es automática (primer box libre, recorriendo A1→A10,
-// B1→B10, ...) y se calcula en el momento de registrar, dentro de la
-// misma transacción de Firestore que crea la operación — así, si dos
-// operadores registran al mismo tiempo en el mismo punto, Firestore hace
-// reintentar la transacción que pierde la carrera en vez de que ambas
-// terminen asignadas al mismo box.
+// TODOS los volúmenes de un mismo cliente van juntos al MISMO box (no uno
+// por volumen) — hasta 5 volúmenes (sin contar maletas). Si trae más de
+// 5, o si ya no queda ningún box libre en la matriz, esos volúmenes van
+// directo al mueble "F" (un solo espacio, sin subdivisiones) como
+// desborde. Las maletas nunca entran en la matriz por tamaño: van
+// directo a F siempre, sin importar cuántas traiga el cliente ni cuántos
+// otros volúmenes tenga.
+//
+// La asignación es automática (primer box 100% libre, recorriendo
+// A1→A10, B1→B10, ...) y se calcula justo antes de registrar la
+// operación, con una lectura fresca de las guardas abiertas de ese punto.
 // ============================================================================
 
 const FILAS_MATRIZ_BOXES = ["A", "B", "C", "D"];
 const COLUMNAS_MATRIZ_BOXES = 10;
-const CAPACIDAD_POR_BOX = 2;
+const LIMITE_VOLUMENES_POR_BOX = 5; // por cliente/guarda, sin contar maletas
 
 /**
- * Recorre la matriz en orden fijo y devuelve el primer box con lugar
- * libre. Si tipo es "maleta", o si la matriz está completa, devuelve F.
- * Muta `ocupacion` (clave "FilaColumna" -> cantidad ocupada) para que
- * volúmenes siguientes de la MISMA operación (ej. 2 bolsas en la misma
- * guarda) no compitan por el mismo box ya elegido acá.
+ * Recorre la matriz en orden fijo y devuelve el primer box que no está
+ * ocupado por ninguna otra guarda abierta (`boxesOcupados` es un Set de
+ * claves "FilaColumna", ej. "B7"). null si la matriz está llena.
  */
-function asignarUbicacionVolumen(tipo, ocupacion) {
-  if (tipo === "maleta") return { mueble: "F" };
-
+function buscarBoxLibre(boxesOcupados) {
   for (const fila of FILAS_MATRIZ_BOXES) {
     for (let columna = 1; columna <= COLUMNAS_MATRIZ_BOXES; columna++) {
       const clave = `${fila}${columna}`;
-      const ocupados = ocupacion[clave] || 0;
-      if (ocupados < CAPACIDAD_POR_BOX) {
-        ocupacion[clave] = ocupados + 1;
-        return { mueble: "matriz", fila, columna };
-      }
+      if (!boxesOcupados.has(clave)) return { fila, columna };
     }
   }
-  return { mueble: "F" }; // Matriz llena: desborde a F
+  return null; // Matriz llena
+}
+
+/**
+ * Asigna la ubicación de TODOS los volúmenes de una guarda a la vez.
+ * Las maletas van directo a F. El resto (hasta LIMITE_VOLUMENES_POR_BOX)
+ * comparte UN solo box entre todos — nunca uno por volumen. Si hay más
+ * volúmenes que el límite, o no queda box libre, todos esos volúmenes
+ * van a F como desborde.
+ */
+function asignarUbicacionesOperacion(volumenes, boxesOcupados) {
+  const noMaletas = volumenes.filter((v) => v.tipo !== "maleta");
+  const boxCompartido = noMaletas.length > 0 && noMaletas.length <= LIMITE_VOLUMENES_POR_BOX ? buscarBoxLibre(boxesOcupados) : null;
+
+  return volumenes.map((v) => {
+    if (v.tipo === "maleta") return { ...v, ubicacion: { mueble: "F" } };
+    if (boxCompartido) return { ...v, ubicacion: { mueble: "matriz", fila: boxCompartido.fila, columna: boxCompartido.columna } };
+    return { ...v, ubicacion: { mueble: "F" } }; // más de 5, o matriz llena: desborde
+  });
 }
 
 /** Texto corto para mostrar en pantalla, tiket y etiqueta: "B-07" o "F". */
@@ -787,21 +801,17 @@ function NuevaGuarda({ usuario }) {
     // transacciones en todos lados). Si en la práctica esto llega a
     // pasar, se puede revisar más adelante.
     const snapAbiertas = await window.guardaSysDb.collection("operaciones").where("estado", "==", "abierta").get();
-    const ocupacionBoxes = {};
+    const boxesOcupados = new Set();
     snapAbiertas.docs.forEach((doc) => {
       const op = doc.data();
       if (op.puntoGuardaId !== puntoGuarda.id) return;
       (op.volumenes || []).forEach((v) => {
         if (v.ubicacion && v.ubicacion.mueble === "matriz") {
-          const clave = `${v.ubicacion.fila}${v.ubicacion.columna}`;
-          ocupacionBoxes[clave] = (ocupacionBoxes[clave] || 0) + 1;
+          boxesOcupados.add(`${v.ubicacion.fila}${v.ubicacion.columna}`);
         }
       });
     });
-    const volumenesConUbicacion = volumenes.map((v) => ({
-      ...v,
-      ubicacion: asignarUbicacionVolumen(v.tipo, ocupacionBoxes),
-    }));
+    const volumenesConUbicacion = asignarUbicacionesOperacion(volumenes, boxesOcupados);
 
     try {
       const resultado = await window.guardaSysDb.runTransaction(async (tx) => {

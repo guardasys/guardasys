@@ -4,6 +4,23 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 versionado según [SemVer](https://semver.org/lang/es/).
 
+## [0.18.0] - 2026-09-19
+
+### Cambiado
+- **Rediseño de la asignación de boxes.** Cambio de fondo en cómo se usa
+  la matriz:
+  - Antes un box lo podían compartir hasta 2 volúmenes de clientes
+    distintos. Ahora **un box es de un solo cliente por vez** — queda
+    ocupado entero apenas se le asigna a una guarda, y se libera recién
+    cuando esa guarda se cierra.
+  - Antes cada volumen recibía su propio box por separado. Ahora
+    **todos los volúmenes de un mismo cliente van juntos a un solo
+    box** — hasta 5 volúmenes (sin contar maletas). Si trae más de 5, o
+    si ya no queda ningún box libre en la matriz, van directo al
+    mueble **F** como desborde.
+  - Las maletas siguen yendo directo a F siempre, sin excepción — eso
+    no cambió.
+
 ## [0.17.0] - 2026-09-19
 
 ### Cambiado
