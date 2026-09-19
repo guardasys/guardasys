@@ -4,6 +4,19 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 versionado según [SemVer](https://semver.org/lang/es/).
 
+## [0.17.0] - 2026-09-19
+
+### Cambiado
+- **Se saca "Descripción" del formulario de volúmenes** (era obligatoria
+  y ya no hace falta). Ahora cada volumen es solo Tipo + Cantidad. Se ve
+  reflejado así en pantalla ("Maleta x2"), en el ticket, en la etiqueta
+  de cada bulto, en Devoluciones y en el detalle de Reportes (la columna
+  "Descripción" pasó a ser "Cantidad").
+- **Renombrados dos tipos de volumen**: "Valija" → **"Maleta"**,
+  "Compra" → **"Caja"**. El que va directo al mueble F por tamaño sigue
+  siendo el mismo (ahora "Maleta"). Las guardas ya registradas con el
+  tipo viejo no cambian — solo afecta los registros nuevos.
+
 ## [0.16.1] - 2026-09-19
 
 ### Corregido

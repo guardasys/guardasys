@@ -130,7 +130,7 @@ function ReportesModule() {
           ticket: op.codigoTicket,
           cliente: op.clienteSnapshot ? op.clienteSnapshot.nombreCompleto : "—",
           tipo: v.tipo ? v.tipo.charAt(0).toUpperCase() + v.tipo.slice(1) : "—",
-          descripcion: v.descripcion || "—",
+          cantidad: v.cantidadItems || 1,
           ubicacion: formatearUbicacion(v.ubicacion),
         }))
       )
@@ -277,7 +277,7 @@ function ReportesModule() {
                         <th>Ticket</th>
                         <th>Cliente</th>
                         <th>Tipo</th>
-                        <th>Descripción</th>
+                        <th>Cantidad</th>
                         <th>Box</th>
                       </tr>
                     </thead>
@@ -287,7 +287,7 @@ function ReportesModule() {
                           <td style={{ whiteSpace: "nowrap" }}>{v.ticket}</td>
                           <td>{v.cliente}</td>
                           <td>{v.tipo}</td>
-                          <td>{v.descripcion}</td>
+                          <td>{v.cantidad}</td>
                           <td style={{ whiteSpace: "nowrap" }}>{v.ubicacion}</td>
                         </tr>
                       ))}

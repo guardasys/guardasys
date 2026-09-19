@@ -302,8 +302,7 @@ function DevolucionesModule({ usuario }) {
               <div className="volumen-item" key={v.volumenId}>
                 <span className="tipo-badge">{etiquetaTipoVolumen(v.tipo)}</span>
                 <span className="tipo-badge" style={{ background: "#262626" }}>Box {formatearUbicacion(v.ubicacion)}</span>
-                <span>{v.descripcion}</span>
-                {v.cantidadItems && <span className="texto-suave">({v.cantidadItems} items)</span>}
+                <span>x{v.cantidadItems || 1}</span>
               </div>
             ))}
           </div>

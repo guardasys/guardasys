@@ -374,14 +374,14 @@ function PanelInicio({ usuario }) {
 // NUEVA GUARDA — módulo funcional: registrar cliente + volúmenes + ticket
 // ============================================================================
 
-const TIPOS_VOLUMEN = ["valija", "bolsa", "mochila", "compra", "otro"];
+const TIPOS_VOLUMEN = ["maleta", "bolsa", "mochila", "caja", "otro"];
 const TIPOS_DOCUMENTO = ["CPF", "CI", "DNI", "Pasaporte", "Otro"];
 
 // ============================================================================
 // UBICACIÓN FÍSICA — matriz de boxes por punto de guarda
 // ============================================================================
 // Cada punto de guarda tiene un mueble "matriz" con 4 filas (A-D) x 10
-// columnas = 40 boxes, cada uno con lugar para 2 volúmenes. Las valijas no
+// columnas = 40 boxes, cada uno con lugar para 2 volúmenes. Las maletas no
 // entran en la matriz por tamaño: van directo al mueble "F" (un solo
 // espacio, sin subdivisiones). Si la matriz ya está llena, cualquier otro
 // volumen también cae en F como desborde.
@@ -400,13 +400,13 @@ const CAPACIDAD_POR_BOX = 2;
 
 /**
  * Recorre la matriz en orden fijo y devuelve el primer box con lugar
- * libre. Si tipo es "valija", o si la matriz está completa, devuelve F.
+ * libre. Si tipo es "maleta", o si la matriz está completa, devuelve F.
  * Muta `ocupacion` (clave "FilaColumna" -> cantidad ocupada) para que
  * volúmenes siguientes de la MISMA operación (ej. 2 bolsas en la misma
  * guarda) no compitan por el mismo box ya elegido acá.
  */
 function asignarUbicacionVolumen(tipo, ocupacion) {
-  if (tipo === "valija") return { mueble: "F" };
+  if (tipo === "maleta") return { mueble: "F" };
 
   for (const fila of FILAS_MATRIZ_BOXES) {
     for (let columna = 1; columna <= COLUMNAS_MATRIZ_BOXES; columna++) {
@@ -507,7 +507,6 @@ async function imprimirTicket(operacion) {
           clienteNumeroDocumento: operacion.clienteSnapshot.numeroDocumento,
           volumenes: operacion.volumenes.map((v) => ({
             tipo: v.tipo,
-            descripcion: v.descripcion,
             cantidadItems: v.cantidadItems,
             ubicacionTexto: formatearUbicacion(v.ubicacion),
           })),
@@ -573,7 +572,7 @@ function NuevaGuarda({ usuario }) {
   const [paisTelefono, setPaisTelefono] = useState(PAISES_PRIORITARIOS[0]); // Brasil por defecto
 
   const [volumenes, setVolumenes] = useState([]);
-  const [nuevoVolumen, setNuevoVolumen] = useState({ tipo: "valija", descripcion: "", cantidadItems: "" });
+  const [nuevoVolumen, setNuevoVolumen] = useState({ tipo: "maleta", cantidadItems: "" });
 
   const [consentimientoFoto, setConsentimientoFoto] = useState(false);
   const [camaraActiva, setCamaraActiva] = useState(false);
@@ -729,18 +728,16 @@ function NuevaGuarda({ usuario }) {
   }
 
   function agregarVolumen() {
-    if (!nuevoVolumen.descripcion.trim()) return;
     setVolumenes((prev) => [
       ...prev,
       {
         volumenId: generarIdVolumen(),
         tipo: nuevoVolumen.tipo,
-        descripcion: nuevoVolumen.descripcion.trim(),
-        cantidadItems: nuevoVolumen.cantidadItems ? Number(nuevoVolumen.cantidadItems) : null,
+        cantidadItems: nuevoVolumen.cantidadItems ? Number(nuevoVolumen.cantidadItems) : 1,
         fotoUrl: null,
       },
     ]);
-    setNuevoVolumen({ tipo: "valija", descripcion: "", cantidadItems: "" });
+    setNuevoVolumen({ tipo: "maleta", cantidadItems: "" });
   }
 
   function quitarVolumen(volumenId) {
@@ -899,7 +896,7 @@ function NuevaGuarda({ usuario }) {
       // que deshacer nada. Si falla, el operador puede reintentar.
       const resultadoImpresion = await imprimirTicket(operacionParaImprimir);
       const ubicaciones = operacionParaImprimir.volumenes.map((v) => ({
-        descripcion: v.descripcion,
+        etiqueta: `${etiquetaTipoVolumen(v.tipo)} x${v.cantidadItems || 1}`,
         ubicacionTexto: formatearUbicacion(v.ubicacion),
       }));
       if (resultadoImpresion.success) {
@@ -948,7 +945,7 @@ function NuevaGuarda({ usuario }) {
             <div style={{ marginTop: 8 }}>
               {mensaje.ubicaciones.map((u, i) => (
                 <div key={i} style={{ fontSize: 13 }}>
-                  {u.descripcion}: <strong>Box {u.ubicacionTexto}</strong>
+                  {u.etiqueta}: <strong>Box {u.ubicacionTexto}</strong>
                 </div>
               ))}
             </div>
@@ -963,7 +960,7 @@ function NuevaGuarda({ usuario }) {
             <div style={{ marginTop: 8 }}>
               {mensaje.ubicaciones.map((u, i) => (
                 <div key={i} style={{ fontSize: 13 }}>
-                  {u.descripcion}: <strong>Box {u.ubicacionTexto}</strong>
+                  {u.etiqueta}: <strong>Box {u.ubicacionTexto}</strong>
                 </div>
               ))}
             </div>
@@ -1139,8 +1136,7 @@ function NuevaGuarda({ usuario }) {
             {volumenes.map((v) => (
               <div className="volumen-item" key={v.volumenId}>
                 <span className="tipo-badge">{etiquetaTipoVolumen(v.tipo)}</span>
-                <span>{v.descripcion}</span>
-                {v.cantidadItems && <span className="texto-suave">({v.cantidadItems} items)</span>}
+                <span>x{v.cantidadItems}</span>
                 <button className="quitar" onClick={() => quitarVolumen(v.volumenId)}>
                   Quitar
                 </button>
@@ -1162,17 +1158,11 @@ function NuevaGuarda({ usuario }) {
                 </select>
               </div>
               <div className="campo">
-                <label>Descripción</label>
-                <input
-                  value={nuevoVolumen.descripcion}
-                  onChange={(e) => setNuevoVolumen({ ...nuevoVolumen, descripcion: e.target.value })}
-                  placeholder="ej. valija roja mediana"
-                />
-              </div>
-              <div className="campo">
-                <label>Cant. items (opcional)</label>
+                <label>Cantidad</label>
                 <input
                   type="number"
+                  min="1"
+                  placeholder="1"
                   value={nuevoVolumen.cantidadItems}
                   onChange={(e) => setNuevoVolumen({ ...nuevoVolumen, cantidadItems: e.target.value })}
                 />
