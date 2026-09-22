@@ -15,6 +15,7 @@ const ACCIONES_AUDITORIA = [
   "error_impresion",
   "crear_usuario",
   "editar_usuario",
+  "renovar_contrasena_usuario",
   "activar_usuario",
   "desactivar_usuario",
   "crear_punto_guarda",

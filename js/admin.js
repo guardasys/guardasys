@@ -77,6 +77,19 @@ function AdminUsuarios({ usuario }) {
     puntoGuardaId: "",
   });
 
+  // Edición de un usuario existente (nombre, punto de guarda, renovar
+  // contraseña). El email y la contraseña actual no se pueden editar
+  // directamente desde acá — cambiar el email de Authentication o fijar
+  // una contraseña nueva a mano requiere el SDK de administrador
+  // (server-side), que este sistema no tiene. Por eso "renovar
+  // contraseña" manda un email de restablecimiento en vez de dejar
+  // escribir una nueva — es la única vía segura sin backend propio.
+  const [editandoId, setEditandoId] = useState(null);
+  const [formEdicion, setFormEdicion] = useState({ nombreCompleto: "", puntoGuardaId: "" });
+  const [guardandoEdicion, setGuardandoEdicion] = useState(false);
+  const [enviandoReset, setEnviandoReset] = useState(false);
+  const [mensajeEdicion, setMensajeEdicion] = useState(null);
+
   function cargarLista() {
     setCargando(true);
     window.guardaSysDb
@@ -163,6 +176,60 @@ function AdminUsuarios({ usuario }) {
     cargarLista();
   }
 
+  function abrirEdicion(u) {
+    setEditandoId(u.id);
+    setFormEdicion({ nombreCompleto: u.nombreCompleto || "", puntoGuardaId: u.puntoGuardaId || "" });
+    setMensajeEdicion(null);
+  }
+
+  function cerrarEdicion() {
+    setEditandoId(null);
+    setMensajeEdicion(null);
+  }
+
+  async function guardarEdicion(u) {
+    if (!formEdicion.nombreCompleto.trim()) {
+      setMensajeEdicion({ tipo: "error", texto: "El nombre no puede quedar vacío." });
+      return;
+    }
+    setGuardandoEdicion(true);
+    try {
+      const cambios = { nombreCompleto: formEdicion.nombreCompleto.trim(), puntoGuardaId: formEdicion.puntoGuardaId || null };
+      await window.guardaSysDb.collection("usuarios").doc(u.id).update(cambios);
+      await registrarAuditoria(
+        usuario,
+        "editar_usuario",
+        "usuario",
+        u.id,
+        { nombreCompleto: u.nombreCompleto, puntoGuardaId: u.puntoGuardaId || null },
+        cambios
+      );
+      cerrarEdicion();
+      cargarLista();
+    } catch (err) {
+      console.error(err);
+      setMensajeEdicion({ tipo: "error", texto: "No se pudieron guardar los cambios." });
+    } finally {
+      setGuardandoEdicion(false);
+    }
+  }
+
+  async function renovarContrasena(u) {
+    setEnviandoReset(true);
+    setMensajeEdicion(null);
+    try {
+      await window.guardaSysAuth.sendPasswordResetEmail(u.email);
+      await registrarAuditoria(usuario, "renovar_contrasena_usuario", "usuario", u.id, null, { email: u.email });
+      setMensajeEdicion({ tipo: "exito", texto: `Se mandó un email a ${u.email} para que elija una contraseña nueva.` });
+    } catch (err) {
+      console.error(err);
+      const texto = err.code === "auth/user-not-found" ? "No existe un usuario de Authentication con ese email." : "No se pudo mandar el email de restablecimiento.";
+      setMensajeEdicion({ tipo: "error", texto });
+    } finally {
+      setEnviandoReset(false);
+    }
+  }
+
   return (
     <React.Fragment>
       <div className="panel">
@@ -242,29 +309,92 @@ function AdminUsuarios({ usuario }) {
             </thead>
             <tbody>
               {lista.map((u) => (
-                <tr key={u.id}>
-                  <td>{u.nombreCompleto}</td>
-                  <td>{u.email}</td>
-                  <td>
-                    <select value={u.rol} onChange={(e) => cambiarRol(u, e.target.value)}>
-                      {ROLES.map((r) => (
-                        <option key={r} value={r}>
-                          {r}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td>
-                    <span className={"estado-badge " + (u.activo ? "estado-ok" : "estado-inactivo")}>
-                      {u.activo ? "Activo" : "Inactivo"}
-                    </span>
-                  </td>
-                  <td>
-                    <button className="boton boton-secundario boton-chico" onClick={() => alternarActivo(u)}>
-                      {u.activo ? "Desactivar" : "Activar"}
-                    </button>
-                  </td>
-                </tr>
+                <React.Fragment key={u.id}>
+                  <tr>
+                    <td>{u.nombreCompleto}</td>
+                    <td>{u.email}</td>
+                    <td>
+                      <select value={u.rol} onChange={(e) => cambiarRol(u, e.target.value)}>
+                        {ROLES.map((r) => (
+                          <option key={r} value={r}>
+                            {r}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td>
+                      <span className={"estado-badge " + (u.activo ? "estado-ok" : "estado-inactivo")}>
+                        {u.activo ? "Activo" : "Inactivo"}
+                      </span>
+                    </td>
+                    <td style={{ whiteSpace: "nowrap" }}>
+                      <button className="boton boton-secundario boton-chico" onClick={() => alternarActivo(u)}>
+                        {u.activo ? "Desactivar" : "Activar"}
+                      </button>{" "}
+                      <button
+                        className="boton boton-secundario boton-chico"
+                        onClick={() => (editandoId === u.id ? cerrarEdicion() : abrirEdicion(u))}
+                      >
+                        {editandoId === u.id ? "Cancelar" : "Editar"}
+                      </button>
+                    </td>
+                  </tr>
+                  {editandoId === u.id && (
+                    <tr>
+                      <td colSpan="5">
+                        <div style={{ padding: 14, background: "#faf7f2", borderRadius: 8, marginBottom: 4 }}>
+                          {mensajeEdicion && (
+                            <div className={mensajeEdicion.tipo === "exito" ? "mensaje-exito" : "mensaje-error"}>{mensajeEdicion.texto}</div>
+                          )}
+                          <div className="fila-campos">
+                            <div className="campo">
+                              <label>Nombre completo</label>
+                              <input
+                                value={formEdicion.nombreCompleto}
+                                onChange={(e) => setFormEdicion({ ...formEdicion, nombreCompleto: e.target.value })}
+                              />
+                            </div>
+                            <div className="campo">
+                              <label>Punto de guarda</label>
+                              <select
+                                value={formEdicion.puntoGuardaId}
+                                onChange={(e) => setFormEdicion({ ...formEdicion, puntoGuardaId: e.target.value })}
+                              >
+                                <option value="">— sin asignar —</option>
+                                {puntosGuarda.map((p) => (
+                                  <option key={p.id} value={p.id}>
+                                    {p.nombre}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                          <p className="texto-suave" style={{ marginTop: 4 }}>
+                            El email no se puede cambiar desde acá (es el usuario de acceso). Si hace falta cambiarlo, avisame y creamos el usuario de nuevo con el email correcto.
+                          </p>
+                          <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+                            <button
+                              className="boton boton-primario boton-chico"
+                              style={{ width: "auto" }}
+                              onClick={() => guardarEdicion(u)}
+                              disabled={guardandoEdicion}
+                            >
+                              {guardandoEdicion ? "Guardando…" : "Guardar cambios"}
+                            </button>
+                            <button
+                              className="boton boton-secundario boton-chico"
+                              style={{ width: "auto" }}
+                              onClick={() => renovarContrasena(u)}
+                              disabled={enviandoReset}
+                            >
+                              {enviandoReset ? "Enviando…" : "Renovar contraseña"}
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               ))}
             </tbody>
           </table>

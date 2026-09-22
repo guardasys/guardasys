@@ -4,6 +4,28 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 versionado según [SemVer](https://semver.org/lang/es/).
 
+## [0.19.0] - 2026-09-19
+
+### Agregado
+- **Botón "Editar" en Administración → Usuarios.** Abre un panel debajo
+  de la fila del usuario con Nombre completo y Punto de guarda editables
+  ("Guardar cambios"), y un botón aparte "Renovar contraseña".
+- **Renovar contraseña**: manda un email de restablecimiento a la
+  dirección del usuario (Firebase se lo maneja: el usuario abre el link
+  y elige su contraseña nueva). No se puede fijar una contraseña a mano
+  desde acá — este sistema no tiene backend con SDK de administrador, así
+  que la única vía segura para cambiar la contraseña de OTRO usuario es
+  el email de restablecimiento. El rol y el estado (activo/inactivo) ya
+  se podían cambiar antes y siguen igual, sin tocar.
+- Nueva acción de auditoría `renovar_contrasena_usuario` (aparece en el
+  filtro de Auditoría).
+
+### Nota
+- El email tampoco se puede editar desde acá (cambiar el email de
+  Authentication de otro usuario requiere lo mismo: SDK de
+  administrador). Si hace falta corregir un email mal cargado, por ahora
+  hay que crear el usuario de nuevo con el email correcto.
+
 ## [0.18.0] - 2026-09-19
 
 ### Cambiado
