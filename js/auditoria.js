@@ -19,6 +19,7 @@ const ACCIONES_AUDITORIA = [
   "activar_usuario",
   "desactivar_usuario",
   "crear_punto_guarda",
+  "editar_punto_guarda",
   "activar_punto_guarda",
   "desactivar_punto_guarda",
   "crear_terminal",

@@ -413,7 +413,21 @@ function AdminPuntosGuarda({ usuario }) {
   const [cargando, setCargando] = useState(true);
   const [mensaje, setMensaje] = useState(null);
   const [guardando, setGuardando] = useState(false);
-  const [form, setForm] = useState({ codigo: "", nombre: "", capacidadEstimada: "" });
+  const [form, setForm] = useState({
+    codigo: "",
+    nombre: "",
+    capacidadEstimada: "",
+    filas: String(FILAS_MATRIZ_DEFAULT),
+    columnas: String(COLUMNAS_MATRIZ_DEFAULT),
+  });
+
+  // Edición de un punto existente: nombre, capacidad y el tamaño de SU
+  // matriz de boxes (filas x columnas) — el mueble F es siempre el mismo
+  // para todos los puntos, no se configura acá.
+  const [editandoId, setEditandoId] = useState(null);
+  const [formEdicion, setFormEdicion] = useState({ nombre: "", capacidadEstimada: "", filas: "", columnas: "" });
+  const [guardandoEdicion, setGuardandoEdicion] = useState(false);
+  const [mensajeEdicion, setMensajeEdicion] = useState(null);
 
   function cargarLista() {
     setCargando(true);
@@ -425,6 +439,15 @@ function AdminPuntosGuarda({ usuario }) {
   }
 
   useEffect(cargarLista, []);
+
+  // Advertencia (no bloquea) si filas llega a 6 o más: la sexta letra de
+  // fila sería "F", que choca con el nombre del mueble F. En la práctica
+  // los muebles físicos ya fabricados no llegan a esa cantidad, pero
+  // queda esta red de seguridad ante una carga por error.
+  function advertenciaFilas(filas) {
+    const n = Number(filas);
+    return n >= 6 ? `Con ${n} filas, la 6ª fila se llamaría "F" — mismo nombre que el mueble F. Verificá que el mueble físico realmente tenga esa cantidad.` : null;
+  }
 
   async function crear(e) {
     e.preventDefault();
@@ -447,10 +470,12 @@ function AdminPuntosGuarda({ usuario }) {
         nombre: form.nombre.trim(),
         activo: true,
         capacidadEstimada: form.capacidadEstimada ? Number(form.capacidadEstimada) : null,
+        filas: form.filas ? Number(form.filas) : FILAS_MATRIZ_DEFAULT,
+        columnas: form.columnas ? Number(form.columnas) : COLUMNAS_MATRIZ_DEFAULT,
       };
       await ref.set(datos);
       await registrarAuditoria(usuario, "crear_punto_guarda", "puntoGuarda", codigo, null, datos);
-      setForm({ codigo: "", nombre: "", capacidadEstimada: "" });
+      setForm({ codigo: "", nombre: "", capacidadEstimada: "", filas: String(FILAS_MATRIZ_DEFAULT), columnas: String(COLUMNAS_MATRIZ_DEFAULT) });
       cargarLista();
     } finally {
       setGuardando(false);
@@ -462,6 +487,56 @@ function AdminPuntosGuarda({ usuario }) {
     await window.guardaSysDb.collection("puntosGuarda").doc(p.id).update({ activo: nuevoValor });
     await registrarAuditoria(usuario, nuevoValor ? "activar_punto_guarda" : "desactivar_punto_guarda", "puntoGuarda", p.id, { activo: p.activo }, { activo: nuevoValor });
     cargarLista();
+  }
+
+  function abrirEdicion(p) {
+    setEditandoId(p.id);
+    setFormEdicion({
+      nombre: p.nombre || "",
+      capacidadEstimada: p.capacidadEstimada != null ? String(p.capacidadEstimada) : "",
+      filas: String(p.filas || FILAS_MATRIZ_DEFAULT),
+      columnas: String(p.columnas || COLUMNAS_MATRIZ_DEFAULT),
+    });
+    setMensajeEdicion(null);
+  }
+
+  function cerrarEdicion() {
+    setEditandoId(null);
+    setMensajeEdicion(null);
+  }
+
+  async function guardarEdicion(p) {
+    const filas = Number(formEdicion.filas);
+    const columnas = Number(formEdicion.columnas);
+    if (!formEdicion.nombre.trim() || !filas || filas < 1 || !columnas || columnas < 1) {
+      setMensajeEdicion({ tipo: "error", texto: "Completá nombre, y filas/columnas con números mayores a 0." });
+      return;
+    }
+    setGuardandoEdicion(true);
+    try {
+      const cambios = {
+        nombre: formEdicion.nombre.trim(),
+        capacidadEstimada: formEdicion.capacidadEstimada ? Number(formEdicion.capacidadEstimada) : null,
+        filas,
+        columnas,
+      };
+      await window.guardaSysDb.collection("puntosGuarda").doc(p.id).update(cambios);
+      await registrarAuditoria(
+        usuario,
+        "editar_punto_guarda",
+        "puntoGuarda",
+        p.id,
+        { nombre: p.nombre, capacidadEstimada: p.capacidadEstimada, filas: p.filas, columnas: p.columnas },
+        cambios
+      );
+      cerrarEdicion();
+      cargarLista();
+    } catch (err) {
+      console.error(err);
+      setMensajeEdicion({ tipo: "error", texto: "No se pudieron guardar los cambios." });
+    } finally {
+      setGuardandoEdicion(false);
+    }
   }
 
   return (
@@ -495,7 +570,31 @@ function AdminPuntosGuarda({ usuario }) {
                 onChange={(e) => setForm({ ...form, capacidadEstimada: e.target.value })}
               />
             </div>
+            <div className="campo">
+              <label>Filas de la matriz</label>
+              <input
+                type="number"
+                min="1"
+                value={form.filas}
+                onChange={(e) => setForm({ ...form, filas: e.target.value })}
+              />
+            </div>
+            <div className="campo">
+              <label>Columnas de la matriz</label>
+              <input
+                type="number"
+                min="1"
+                value={form.columnas}
+                onChange={(e) => setForm({ ...form, columnas: e.target.value })}
+              />
+            </div>
           </div>
+          {advertenciaFilas(form.filas) && (
+            <p style={{ color: "#a35b1f", fontSize: 13, marginTop: 4 }}>{advertenciaFilas(form.filas)}</p>
+          )}
+          <p className="texto-suave" style={{ marginTop: 4 }}>
+            El mueble F (para maletas y desborde) es el mismo esquema para todos los puntos — no se configura acá.
+          </p>
           <button className="boton boton-primario" style={{ width: "auto", padding: "10px 24px", marginTop: 8 }} disabled={guardando}>
             {guardando ? "Creando…" : "Crear punto de guarda"}
           </button>
@@ -513,27 +612,99 @@ function AdminPuntosGuarda({ usuario }) {
                 <th>Código</th>
                 <th>Nombre</th>
                 <th>Capacidad</th>
+                <th>Matriz</th>
                 <th>Estado</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {lista.map((p) => (
-                <tr key={p.id}>
-                  <td><span className="ticket-codigo">{p.codigo}</span></td>
-                  <td>{p.nombre}</td>
-                  <td>{p.capacidadEstimada || "—"}</td>
-                  <td>
-                    <span className={"estado-badge " + (p.activo ? "estado-ok" : "estado-inactivo")}>
-                      {p.activo ? "Activo" : "Inactivo"}
-                    </span>
-                  </td>
-                  <td>
-                    <button className="boton boton-secundario boton-chico" onClick={() => alternarActivo(p)}>
-                      {p.activo ? "Desactivar" : "Activar"}
-                    </button>
-                  </td>
-                </tr>
+                <React.Fragment key={p.id}>
+                  <tr>
+                    <td><span className="ticket-codigo">{p.codigo}</span></td>
+                    <td>{p.nombre}</td>
+                    <td>{p.capacidadEstimada || "—"}</td>
+                    <td>{(p.filas || FILAS_MATRIZ_DEFAULT) + " x " + (p.columnas || COLUMNAS_MATRIZ_DEFAULT)}</td>
+                    <td>
+                      <span className={"estado-badge " + (p.activo ? "estado-ok" : "estado-inactivo")}>
+                        {p.activo ? "Activo" : "Inactivo"}
+                      </span>
+                    </td>
+                    <td style={{ whiteSpace: "nowrap" }}>
+                      <button className="boton boton-secundario boton-chico" onClick={() => alternarActivo(p)}>
+                        {p.activo ? "Desactivar" : "Activar"}
+                      </button>{" "}
+                      <button
+                        className="boton boton-secundario boton-chico"
+                        onClick={() => (editandoId === p.id ? cerrarEdicion() : abrirEdicion(p))}
+                      >
+                        {editandoId === p.id ? "Cancelar" : "Editar"}
+                      </button>
+                    </td>
+                  </tr>
+                  {editandoId === p.id && (
+                    <tr>
+                      <td colSpan="6">
+                        <div style={{ padding: 14, background: "#faf7f2", borderRadius: 8, marginBottom: 4 }}>
+                          {mensajeEdicion && (
+                            <div className={mensajeEdicion.tipo === "exito" ? "mensaje-exito" : "mensaje-error"}>{mensajeEdicion.texto}</div>
+                          )}
+                          <div className="fila-campos">
+                            <div className="campo">
+                              <label>Nombre</label>
+                              <input
+                                value={formEdicion.nombre}
+                                onChange={(e) => setFormEdicion({ ...formEdicion, nombre: e.target.value })}
+                              />
+                            </div>
+                            <div className="campo">
+                              <label>Capacidad estimada (opcional)</label>
+                              <input
+                                type="number"
+                                value={formEdicion.capacidadEstimada}
+                                onChange={(e) => setFormEdicion({ ...formEdicion, capacidadEstimada: e.target.value })}
+                              />
+                            </div>
+                            <div className="campo">
+                              <label>Filas de la matriz</label>
+                              <input
+                                type="number"
+                                min="1"
+                                value={formEdicion.filas}
+                                onChange={(e) => setFormEdicion({ ...formEdicion, filas: e.target.value })}
+                              />
+                            </div>
+                            <div className="campo">
+                              <label>Columnas de la matriz</label>
+                              <input
+                                type="number"
+                                min="1"
+                                value={formEdicion.columnas}
+                                onChange={(e) => setFormEdicion({ ...formEdicion, columnas: e.target.value })}
+                              />
+                            </div>
+                          </div>
+                          {advertenciaFilas(formEdicion.filas) && (
+                            <p style={{ color: "#a35b1f", fontSize: 13, marginTop: 4 }}>{advertenciaFilas(formEdicion.filas)}</p>
+                          )}
+                          <p className="texto-suave" style={{ marginTop: 4 }}>
+                            El código no se puede cambiar desde acá (ya está impreso en tickets anteriores). Achicar filas/columnas no mueve las guardas ya asignadas a boxes que queden "fuera" del nuevo tamaño — revisá que no haya nada abierto ahí antes de achicar.
+                          </p>
+                          <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+                            <button
+                              className="boton boton-primario boton-chico"
+                              style={{ width: "auto" }}
+                              onClick={() => guardarEdicion(p)}
+                              disabled={guardandoEdicion}
+                            >
+                              {guardandoEdicion ? "Guardando…" : "Guardar cambios"}
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               ))}
             </tbody>
           </table>
