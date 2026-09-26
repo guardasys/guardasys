@@ -4,6 +4,40 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 versionado según [SemVer](https://semver.org/lang/es/).
 
+## [0.20.0] - 2026-09-26
+
+### Agregado
+- **Tamaño de matriz configurable por punto de guarda.** Hasta ahora la
+  matriz de boxes (4 filas x 10 columnas) era la misma, fija en el
+  código, para todos los puntos de guarda. Ahora cada punto tiene su
+  propio tamaño de matriz — campos "Filas de la matriz" y "Columnas de
+  la matriz" en Administración → Puntos de guarda, tanto al crear uno
+  nuevo como al editar uno existente (nuevo botón "Editar", mismo patrón
+  que ya usa Usuarios).
+- Los puntos de guarda que ya existían antes de esta versión (sin
+  `filas`/`columnas` cargados) siguen funcionando exactamente igual que
+  antes: si el campo no está, el sistema asume 4x10 — el tamaño que
+  tenían todos hardcodeado hasta ahora. **Hay que editar cada punto para
+  ponerle su tamaño real** si difiere de 4x10; mientras no se edite,
+  sigue en 4x10.
+- Advertencia (no bloqueante) en el formulario si se cargan 6 o más
+  filas: la 6ª fila se llamaría "F", mismo nombre que el mueble F —
+  ambas cosas coexistirían con el mismo texto. En la práctica los
+  muebles físicos ya fabricados no llegan a esa cantidad de filas, pero
+  queda esta red de seguridad ante una carga mal hecha.
+- Nueva acción de auditoría `editar_punto_guarda` (aparece en el filtro
+  de Auditoría).
+
+### Nota
+- El mueble **F sigue siendo idéntico para todos los puntos** — un solo
+  espacio sin subdivisiones, no se configura por punto. Recibe las
+  maletas siempre, el resto de los volúmenes cuando el cliente trae más
+  de 5, o cuando la matriz de ESE punto específico ya está llena.
+- Achicar filas/columnas de un punto con guardas abiertas asignadas a
+  boxes que queden "fuera" del nuevo tamaño no las mueve ni las cierra
+  — quedan con su ubicación tal cual estaba. Conviene revisar que no
+  haya nada abierto en esos boxes antes de achicar la matriz.
+
 ## [0.19.0] - 2026-09-19
 
 ### Agregado

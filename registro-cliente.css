@@ -1,0 +1,156 @@
+/* ============================================================================
+   Módulo público de autoregistro de clientes — pensado mobile-first, ya
+   que se abre siempre desde el celular del cliente vía QR.
+   ============================================================================ */
+
+.pantalla-registro-cliente {
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  background: var(--oscuro);
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(217, 147, 47, 0.08), transparent 40%),
+    radial-gradient(circle at 80% 80%, rgba(217, 147, 47, 0.06), transparent 40%);
+  padding: 32px 16px;
+}
+
+.tarjeta-registro-cliente {
+  background: var(--superficie);
+  border-radius: 10px;
+  padding: 28px 22px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+}
+
+.registro-cliente-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.registro-cliente-header .marca {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.registro-cliente-header .marca-logo {
+  height: 20px;
+  width: auto;
+  display: block;
+}
+
+.registro-cliente-header .marca-sub {
+  font-family: var(--fuente-marca);
+  font-size: 11px;
+  color: var(--texto-suave);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.selector-idioma {
+  display: flex;
+  gap: 4px;
+}
+
+.selector-idioma button {
+  border: 1px solid var(--borde);
+  background: var(--fondo);
+  border-radius: 6px;
+  font-size: 17px;
+  padding: 4px 7px;
+  cursor: pointer;
+  line-height: 1;
+  opacity: 0.55;
+}
+
+.selector-idioma button.activo {
+  opacity: 1;
+  border-color: var(--dorado-marca);
+  background: var(--dorado-marca-suave);
+}
+
+.tarjeta-registro-cliente h1 {
+  font-size: 19px;
+  margin: 0 0 6px 0;
+}
+
+.registro-cliente-subtitulo {
+  font-size: 13px;
+  color: var(--texto-suave);
+  margin: 0 0 22px 0;
+  line-height: 1.5;
+}
+
+.registro-cliente-aviso {
+  font-size: 12px;
+  color: var(--texto-suave);
+  margin-top: 12px;
+}
+
+/* -- "ya registrado" -- */
+
+.mensaje-info-registro {
+  background: var(--fondo);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.mensaje-info-registro p {
+  font-size: 13px;
+  color: var(--texto-suave);
+  margin: 4px 0 12px 0;
+}
+
+.dato-existente {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-top: 1px solid var(--borde);
+  font-size: 14px;
+}
+
+.dato-existente-label {
+  color: var(--texto-suave);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* -- éxito -- */
+
+.mensaje-exito-registro {
+  background: #eef8f2;
+  border-radius: 8px;
+  padding: 18px 16px;
+  text-align: center;
+}
+
+.mensaje-exito-registro strong {
+  color: var(--verde);
+  font-size: 16px;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.mensaje-exito-registro p {
+  font-size: 13px;
+  color: var(--texto-suave);
+  margin: 0 0 16px 0;
+}
+
+/* -- teléfono con selector de país: ver css/styles.css (compartido con
+   Nueva Guarda) -- */
+
+.tarjeta-registro-cliente .boton {
+  margin-bottom: 10px;
+}
+
+.tarjeta-registro-cliente .boton:last-child {
+  margin-bottom: 0;
+}

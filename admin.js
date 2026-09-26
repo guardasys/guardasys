@@ -1,0 +1,1134 @@
+// ============================================================================
+// MÓDULO DE ADMINISTRACIÓN — usuarios, puntos de guarda, terminales, impresoras
+// Solo accesible para rol "administrador" (ya filtrado en el menú lateral).
+// ============================================================================
+
+function registrarAuditoria(usuario, accion, entidadTipo, entidadId, datosAntes, datosDespues) {
+  return window.guardaSysDb.collection("auditoria").add({
+    usuarioId: usuario.uid,
+    usuarioNombre: usuario.nombreCompleto || usuario.email,
+    fechaHora: firebase.firestore.FieldValue.serverTimestamp(),
+    terminalId: usuario.terminalId || null,
+    accion,
+    entidadTipo,
+    entidadId,
+    datosAntes: datosAntes || null,
+    datosDespues: datosDespues || null,
+  });
+}
+
+const PESTAÑAS_ADMIN = [
+  { id: "usuarios", etiqueta: "Usuarios" },
+  { id: "puntosGuarda", etiqueta: "Puntos de guarda" },
+  { id: "terminales", etiqueta: "Terminales" },
+  { id: "impresoras", etiqueta: "Impresoras" },
+  { id: "cierreMasivo", etiqueta: "Cierre masivo" },
+];
+
+function AdministracionModule({ usuario }) {
+  const [pestaña, setPestaña] = useState("usuarios");
+
+  return (
+    <div className="contenido">
+      <div className="encabezado-pagina">
+        <h1>Administración</h1>
+        <p>Usuarios, puntos de guarda, terminales e impresoras.</p>
+      </div>
+
+      <div className="tabs-admin">
+        {PESTAÑAS_ADMIN.map((t) => (
+          <div
+            key={t.id}
+            className={"tab-admin" + (pestaña === t.id ? " activo" : "")}
+            onClick={() => setPestaña(t.id)}
+          >
+            {t.etiqueta}
+          </div>
+        ))}
+      </div>
+
+      {pestaña === "usuarios" && <AdminUsuarios usuario={usuario} />}
+      {pestaña === "puntosGuarda" && <AdminPuntosGuarda usuario={usuario} />}
+      {pestaña === "terminales" && <AdminTerminales usuario={usuario} />}
+      {pestaña === "impresoras" && <AdminImpresoras usuario={usuario} />}
+      {pestaña === "cierreMasivo" && <CierreMasivoModule usuario={usuario} />}
+    </div>
+  );
+}
+
+// ============================================================================
+// USUARIOS
+// ============================================================================
+
+const ROLES = ["operador", "supervisor", "administrador"];
+
+function AdminUsuarios({ usuario }) {
+  const [lista, setLista] = useState([]);
+  const [puntosGuarda, setPuntosGuarda] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [mensaje, setMensaje] = useState(null);
+  const [guardando, setGuardando] = useState(false);
+
+  const [form, setForm] = useState({
+    nombreCompleto: "",
+    email: "",
+    password: "",
+    rol: "operador",
+    puntoGuardaId: "",
+  });
+
+  // Edición de un usuario existente (nombre, punto de guarda, renovar
+  // contraseña). El email y la contraseña actual no se pueden editar
+  // directamente desde acá — cambiar el email de Authentication o fijar
+  // una contraseña nueva a mano requiere el SDK de administrador
+  // (server-side), que este sistema no tiene. Por eso "renovar
+  // contraseña" manda un email de restablecimiento en vez de dejar
+  // escribir una nueva — es la única vía segura sin backend propio.
+  const [editandoId, setEditandoId] = useState(null);
+  const [formEdicion, setFormEdicion] = useState({ nombreCompleto: "", puntoGuardaId: "" });
+  const [guardandoEdicion, setGuardandoEdicion] = useState(false);
+  const [enviandoReset, setEnviandoReset] = useState(false);
+  const [mensajeEdicion, setMensajeEdicion] = useState(null);
+
+  function cargarLista() {
+    setCargando(true);
+    window.guardaSysDb
+      .collection("usuarios")
+      .get()
+      .then((snap) => setLista(snap.docs.map((d) => ({ id: d.id, ...d.data() }))))
+      .finally(() => setCargando(false));
+  }
+
+  useEffect(() => {
+    cargarLista();
+    window.guardaSysDb
+      .collection("puntosGuarda")
+      .get()
+      .then((snap) => setPuntosGuarda(snap.docs.map((d) => ({ id: d.id, ...d.data() }))));
+  }, []);
+
+  async function crearUsuario(e) {
+    e.preventDefault();
+    setMensaje(null);
+
+    if (!form.nombreCompleto.trim() || !form.email.trim() || form.password.length < 6) {
+      setMensaje({ tipo: "error", texto: "Completá nombre, email y una contraseña de al menos 6 caracteres." });
+      return;
+    }
+
+    setGuardando(true);
+    // App secundaria: crea el usuario de Authentication sin reemplazar la
+    // sesión del administrador que está logueado ahora mismo.
+    const nombreAppTemp = "Secundaria_" + Date.now();
+    const appSecundaria = firebase.initializeApp(GUARDASYS_FIREBASE_CONFIG, nombreAppTemp);
+
+    try {
+      const credencial = await appSecundaria
+        .auth()
+        .createUserWithEmailAndPassword(form.email.trim(), form.password);
+      const uid = credencial.user.uid;
+
+      const datosUsuario = {
+        nombreCompleto: form.nombreCompleto.trim(),
+        email: form.email.trim(),
+        rol: form.rol,
+        puntoGuardaId: form.puntoGuardaId || null,
+        activo: true,
+        creadoEn: firebase.firestore.FieldValue.serverTimestamp(),
+      };
+      await window.guardaSysDb.collection("usuarios").doc(uid).set(datosUsuario);
+      await registrarAuditoria(usuario, "crear_usuario", "usuario", uid, null, datosUsuario);
+
+      await appSecundaria.auth().signOut();
+      setMensaje({ tipo: "exito", texto: `Usuario ${form.email} creado correctamente.` });
+      setForm({ nombreCompleto: "", email: "", password: "", rol: "operador", puntoGuardaId: "" });
+      cargarLista();
+    } catch (err) {
+      console.error(err);
+      const texto =
+        err.code === "auth/email-already-in-use"
+          ? "Ya existe un usuario con ese email."
+          : "No se pudo crear el usuario.";
+      setMensaje({ tipo: "error", texto });
+    } finally {
+      await appSecundaria.delete();
+      setGuardando(false);
+    }
+  }
+
+  async function cambiarRol(u, nuevoRol) {
+    await window.guardaSysDb.collection("usuarios").doc(u.id).update({ rol: nuevoRol });
+    await registrarAuditoria(usuario, "editar_usuario", "usuario", u.id, { rol: u.rol }, { rol: nuevoRol });
+    cargarLista();
+  }
+
+  async function alternarActivo(u) {
+    const nuevoValor = !u.activo;
+    await window.guardaSysDb.collection("usuarios").doc(u.id).update({ activo: nuevoValor });
+    await registrarAuditoria(
+      usuario,
+      nuevoValor ? "activar_usuario" : "desactivar_usuario",
+      "usuario",
+      u.id,
+      { activo: u.activo },
+      { activo: nuevoValor }
+    );
+    cargarLista();
+  }
+
+  function abrirEdicion(u) {
+    setEditandoId(u.id);
+    setFormEdicion({ nombreCompleto: u.nombreCompleto || "", puntoGuardaId: u.puntoGuardaId || "" });
+    setMensajeEdicion(null);
+  }
+
+  function cerrarEdicion() {
+    setEditandoId(null);
+    setMensajeEdicion(null);
+  }
+
+  async function guardarEdicion(u) {
+    if (!formEdicion.nombreCompleto.trim()) {
+      setMensajeEdicion({ tipo: "error", texto: "El nombre no puede quedar vacío." });
+      return;
+    }
+    setGuardandoEdicion(true);
+    try {
+      const cambios = { nombreCompleto: formEdicion.nombreCompleto.trim(), puntoGuardaId: formEdicion.puntoGuardaId || null };
+      await window.guardaSysDb.collection("usuarios").doc(u.id).update(cambios);
+      await registrarAuditoria(
+        usuario,
+        "editar_usuario",
+        "usuario",
+        u.id,
+        { nombreCompleto: u.nombreCompleto, puntoGuardaId: u.puntoGuardaId || null },
+        cambios
+      );
+      cerrarEdicion();
+      cargarLista();
+    } catch (err) {
+      console.error(err);
+      setMensajeEdicion({ tipo: "error", texto: "No se pudieron guardar los cambios." });
+    } finally {
+      setGuardandoEdicion(false);
+    }
+  }
+
+  async function renovarContrasena(u) {
+    setEnviandoReset(true);
+    setMensajeEdicion(null);
+    try {
+      await window.guardaSysAuth.sendPasswordResetEmail(u.email);
+      await registrarAuditoria(usuario, "renovar_contrasena_usuario", "usuario", u.id, null, { email: u.email });
+      setMensajeEdicion({ tipo: "exito", texto: `Se mandó un email a ${u.email} para que elija una contraseña nueva.` });
+    } catch (err) {
+      console.error(err);
+      const texto = err.code === "auth/user-not-found" ? "No existe un usuario de Authentication con ese email." : "No se pudo mandar el email de restablecimiento.";
+      setMensajeEdicion({ tipo: "error", texto });
+    } finally {
+      setEnviandoReset(false);
+    }
+  }
+
+  return (
+    <React.Fragment>
+      <div className="panel">
+        <h2>Nuevo usuario</h2>
+        {mensaje && <div className={mensaje.tipo === "exito" ? "mensaje-exito" : "mensaje-error"}>{mensaje.texto}</div>}
+        <form onSubmit={crearUsuario}>
+          <div className="fila-campos">
+            <div className="campo">
+              <label>Nombre completo</label>
+              <input
+                value={form.nombreCompleto}
+                onChange={(e) => setForm({ ...form, nombreCompleto: e.target.value })}
+              />
+            </div>
+            <div className="campo">
+              <label>Email</label>
+              <input
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+              />
+            </div>
+            <div className="campo">
+              <label>Contraseña inicial</label>
+              <input
+                type="text"
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                placeholder="mínimo 6 caracteres"
+              />
+            </div>
+            <div className="campo">
+              <label>Rol</label>
+              <select value={form.rol} onChange={(e) => setForm({ ...form, rol: e.target.value })}>
+                {ROLES.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="campo">
+              <label>Punto de guarda (opcional)</label>
+              <select
+                value={form.puntoGuardaId}
+                onChange={(e) => setForm({ ...form, puntoGuardaId: e.target.value })}
+              >
+                <option value="">— sin asignar —</option>
+                {puntosGuarda.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <button className="boton boton-primario" style={{ width: "auto", padding: "10px 24px", marginTop: 8 }} disabled={guardando}>
+            {guardando ? "Creando…" : "Crear usuario"}
+          </button>
+        </form>
+      </div>
+
+      <div className="panel">
+        <h2>Usuarios existentes</h2>
+        {cargando ? (
+          <div className="cargando">Cargando…</div>
+        ) : (
+          <table className="tabla-admin">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Email</th>
+                <th>Rol</th>
+                <th>Estado</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {lista.map((u) => (
+                <React.Fragment key={u.id}>
+                  <tr>
+                    <td>{u.nombreCompleto}</td>
+                    <td>{u.email}</td>
+                    <td>
+                      <select value={u.rol} onChange={(e) => cambiarRol(u, e.target.value)}>
+                        {ROLES.map((r) => (
+                          <option key={r} value={r}>
+                            {r}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td>
+                      <span className={"estado-badge " + (u.activo ? "estado-ok" : "estado-inactivo")}>
+                        {u.activo ? "Activo" : "Inactivo"}
+                      </span>
+                    </td>
+                    <td style={{ whiteSpace: "nowrap" }}>
+                      <button className="boton boton-secundario boton-chico" onClick={() => alternarActivo(u)}>
+                        {u.activo ? "Desactivar" : "Activar"}
+                      </button>{" "}
+                      <button
+                        className="boton boton-secundario boton-chico"
+                        onClick={() => (editandoId === u.id ? cerrarEdicion() : abrirEdicion(u))}
+                      >
+                        {editandoId === u.id ? "Cancelar" : "Editar"}
+                      </button>
+                    </td>
+                  </tr>
+                  {editandoId === u.id && (
+                    <tr>
+                      <td colSpan="5">
+                        <div style={{ padding: 14, background: "#faf7f2", borderRadius: 8, marginBottom: 4 }}>
+                          {mensajeEdicion && (
+                            <div className={mensajeEdicion.tipo === "exito" ? "mensaje-exito" : "mensaje-error"}>{mensajeEdicion.texto}</div>
+                          )}
+                          <div className="fila-campos">
+                            <div className="campo">
+                              <label>Nombre completo</label>
+                              <input
+                                value={formEdicion.nombreCompleto}
+                                onChange={(e) => setFormEdicion({ ...formEdicion, nombreCompleto: e.target.value })}
+                              />
+                            </div>
+                            <div className="campo">
+                              <label>Punto de guarda</label>
+                              <select
+                                value={formEdicion.puntoGuardaId}
+                                onChange={(e) => setFormEdicion({ ...formEdicion, puntoGuardaId: e.target.value })}
+                              >
+                                <option value="">— sin asignar —</option>
+                                {puntosGuarda.map((p) => (
+                                  <option key={p.id} value={p.id}>
+                                    {p.nombre}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                          <p className="texto-suave" style={{ marginTop: 4 }}>
+                            El email no se puede cambiar desde acá (es el usuario de acceso). Si hace falta cambiarlo, avisame y creamos el usuario de nuevo con el email correcto.
+                          </p>
+                          <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+                            <button
+                              className="boton boton-primario boton-chico"
+                              style={{ width: "auto" }}
+                              onClick={() => guardarEdicion(u)}
+                              disabled={guardandoEdicion}
+                            >
+                              {guardandoEdicion ? "Guardando…" : "Guardar cambios"}
+                            </button>
+                            <button
+                              className="boton boton-secundario boton-chico"
+                              style={{ width: "auto" }}
+                              onClick={() => renovarContrasena(u)}
+                              disabled={enviandoReset}
+                            >
+                              {enviandoReset ? "Enviando…" : "Renovar contraseña"}
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </React.Fragment>
+  );
+}
+
+// ============================================================================
+// PUNTOS DE GUARDA
+// ============================================================================
+
+function AdminPuntosGuarda({ usuario }) {
+  const [lista, setLista] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [mensaje, setMensaje] = useState(null);
+  const [guardando, setGuardando] = useState(false);
+  const [form, setForm] = useState({
+    codigo: "",
+    nombre: "",
+    capacidadEstimada: "",
+    filas: String(FILAS_MATRIZ_DEFAULT),
+    columnas: String(COLUMNAS_MATRIZ_DEFAULT),
+  });
+
+  // Edición de un punto existente: nombre, capacidad y el tamaño de SU
+  // matriz de boxes (filas x columnas) — el mueble F es siempre el mismo
+  // para todos los puntos, no se configura acá.
+  const [editandoId, setEditandoId] = useState(null);
+  const [formEdicion, setFormEdicion] = useState({ nombre: "", capacidadEstimada: "", filas: "", columnas: "" });
+  const [guardandoEdicion, setGuardandoEdicion] = useState(false);
+  const [mensajeEdicion, setMensajeEdicion] = useState(null);
+
+  function cargarLista() {
+    setCargando(true);
+    window.guardaSysDb
+      .collection("puntosGuarda")
+      .get()
+      .then((snap) => setLista(snap.docs.map((d) => ({ id: d.id, ...d.data() }))))
+      .finally(() => setCargando(false));
+  }
+
+  useEffect(cargarLista, []);
+
+  // Advertencia (no bloquea) si filas llega a 6 o más: la sexta letra de
+  // fila sería "F", que choca con el nombre del mueble F. En la práctica
+  // los muebles físicos ya fabricados no llegan a esa cantidad, pero
+  // queda esta red de seguridad ante una carga por error.
+  function advertenciaFilas(filas) {
+    const n = Number(filas);
+    return n >= 6 ? `Con ${n} filas, la 6ª fila se llamaría "F" — mismo nombre que el mueble F. Verificá que el mueble físico realmente tenga esa cantidad.` : null;
+  }
+
+  async function crear(e) {
+    e.preventDefault();
+    setMensaje(null);
+    const codigo = form.codigo.trim().toUpperCase();
+    if (!codigo || !form.nombre.trim()) {
+      setMensaje({ tipo: "error", texto: "Completá código y nombre." });
+      return;
+    }
+    setGuardando(true);
+    try {
+      const ref = window.guardaSysDb.collection("puntosGuarda").doc(codigo);
+      const existe = (await ref.get()).exists;
+      if (existe) {
+        setMensaje({ tipo: "error", texto: `Ya existe un punto de guarda con código "${codigo}".` });
+        return;
+      }
+      const datos = {
+        codigo,
+        nombre: form.nombre.trim(),
+        activo: true,
+        capacidadEstimada: form.capacidadEstimada ? Number(form.capacidadEstimada) : null,
+        filas: form.filas ? Number(form.filas) : FILAS_MATRIZ_DEFAULT,
+        columnas: form.columnas ? Number(form.columnas) : COLUMNAS_MATRIZ_DEFAULT,
+      };
+      await ref.set(datos);
+      await registrarAuditoria(usuario, "crear_punto_guarda", "puntoGuarda", codigo, null, datos);
+      setForm({ codigo: "", nombre: "", capacidadEstimada: "", filas: String(FILAS_MATRIZ_DEFAULT), columnas: String(COLUMNAS_MATRIZ_DEFAULT) });
+      cargarLista();
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  async function alternarActivo(p) {
+    const nuevoValor = !p.activo;
+    await window.guardaSysDb.collection("puntosGuarda").doc(p.id).update({ activo: nuevoValor });
+    await registrarAuditoria(usuario, nuevoValor ? "activar_punto_guarda" : "desactivar_punto_guarda", "puntoGuarda", p.id, { activo: p.activo }, { activo: nuevoValor });
+    cargarLista();
+  }
+
+  function abrirEdicion(p) {
+    setEditandoId(p.id);
+    setFormEdicion({
+      nombre: p.nombre || "",
+      capacidadEstimada: p.capacidadEstimada != null ? String(p.capacidadEstimada) : "",
+      filas: String(p.filas || FILAS_MATRIZ_DEFAULT),
+      columnas: String(p.columnas || COLUMNAS_MATRIZ_DEFAULT),
+    });
+    setMensajeEdicion(null);
+  }
+
+  function cerrarEdicion() {
+    setEditandoId(null);
+    setMensajeEdicion(null);
+  }
+
+  async function guardarEdicion(p) {
+    const filas = Number(formEdicion.filas);
+    const columnas = Number(formEdicion.columnas);
+    if (!formEdicion.nombre.trim() || !filas || filas < 1 || !columnas || columnas < 1) {
+      setMensajeEdicion({ tipo: "error", texto: "Completá nombre, y filas/columnas con números mayores a 0." });
+      return;
+    }
+    setGuardandoEdicion(true);
+    try {
+      const cambios = {
+        nombre: formEdicion.nombre.trim(),
+        capacidadEstimada: formEdicion.capacidadEstimada ? Number(formEdicion.capacidadEstimada) : null,
+        filas,
+        columnas,
+      };
+      await window.guardaSysDb.collection("puntosGuarda").doc(p.id).update(cambios);
+      await registrarAuditoria(
+        usuario,
+        "editar_punto_guarda",
+        "puntoGuarda",
+        p.id,
+        { nombre: p.nombre, capacidadEstimada: p.capacidadEstimada, filas: p.filas, columnas: p.columnas },
+        cambios
+      );
+      cerrarEdicion();
+      cargarLista();
+    } catch (err) {
+      console.error(err);
+      setMensajeEdicion({ tipo: "error", texto: "No se pudieron guardar los cambios." });
+    } finally {
+      setGuardandoEdicion(false);
+    }
+  }
+
+  return (
+    <React.Fragment>
+      <div className="panel">
+        <h2>Nuevo punto de guarda</h2>
+        {mensaje && <div className="mensaje-error">{mensaje.texto}</div>}
+        <form onSubmit={crear}>
+          <div className="fila-campos">
+            <div className="campo">
+              <label>Código (usado en el ticket)</label>
+              <input
+                value={form.codigo}
+                onChange={(e) => setForm({ ...form, codigo: e.target.value })}
+                placeholder="ej. PB"
+              />
+            </div>
+            <div className="campo">
+              <label>Nombre</label>
+              <input
+                value={form.nombre}
+                onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+                placeholder="ej. Planta Baja"
+              />
+            </div>
+            <div className="campo">
+              <label>Capacidad estimada (opcional)</label>
+              <input
+                type="number"
+                value={form.capacidadEstimada}
+                onChange={(e) => setForm({ ...form, capacidadEstimada: e.target.value })}
+              />
+            </div>
+            <div className="campo">
+              <label>Filas de la matriz</label>
+              <input
+                type="number"
+                min="1"
+                value={form.filas}
+                onChange={(e) => setForm({ ...form, filas: e.target.value })}
+              />
+            </div>
+            <div className="campo">
+              <label>Columnas de la matriz</label>
+              <input
+                type="number"
+                min="1"
+                value={form.columnas}
+                onChange={(e) => setForm({ ...form, columnas: e.target.value })}
+              />
+            </div>
+          </div>
+          {advertenciaFilas(form.filas) && (
+            <p style={{ color: "#a35b1f", fontSize: 13, marginTop: 4 }}>{advertenciaFilas(form.filas)}</p>
+          )}
+          <p className="texto-suave" style={{ marginTop: 4 }}>
+            El mueble F (para maletas y desborde) es el mismo esquema para todos los puntos — no se configura acá.
+          </p>
+          <button className="boton boton-primario" style={{ width: "auto", padding: "10px 24px", marginTop: 8 }} disabled={guardando}>
+            {guardando ? "Creando…" : "Crear punto de guarda"}
+          </button>
+        </form>
+      </div>
+
+      <div className="panel">
+        <h2>Puntos de guarda existentes</h2>
+        {cargando ? (
+          <div className="cargando">Cargando…</div>
+        ) : (
+          <table className="tabla-admin">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Nombre</th>
+                <th>Capacidad</th>
+                <th>Matriz</th>
+                <th>Estado</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {lista.map((p) => (
+                <React.Fragment key={p.id}>
+                  <tr>
+                    <td><span className="ticket-codigo">{p.codigo}</span></td>
+                    <td>{p.nombre}</td>
+                    <td>{p.capacidadEstimada || "—"}</td>
+                    <td>{(p.filas || FILAS_MATRIZ_DEFAULT) + " x " + (p.columnas || COLUMNAS_MATRIZ_DEFAULT)}</td>
+                    <td>
+                      <span className={"estado-badge " + (p.activo ? "estado-ok" : "estado-inactivo")}>
+                        {p.activo ? "Activo" : "Inactivo"}
+                      </span>
+                    </td>
+                    <td style={{ whiteSpace: "nowrap" }}>
+                      <button className="boton boton-secundario boton-chico" onClick={() => alternarActivo(p)}>
+                        {p.activo ? "Desactivar" : "Activar"}
+                      </button>{" "}
+                      <button
+                        className="boton boton-secundario boton-chico"
+                        onClick={() => (editandoId === p.id ? cerrarEdicion() : abrirEdicion(p))}
+                      >
+                        {editandoId === p.id ? "Cancelar" : "Editar"}
+                      </button>
+                    </td>
+                  </tr>
+                  {editandoId === p.id && (
+                    <tr>
+                      <td colSpan="6">
+                        <div style={{ padding: 14, background: "#faf7f2", borderRadius: 8, marginBottom: 4 }}>
+                          {mensajeEdicion && (
+                            <div className={mensajeEdicion.tipo === "exito" ? "mensaje-exito" : "mensaje-error"}>{mensajeEdicion.texto}</div>
+                          )}
+                          <div className="fila-campos">
+                            <div className="campo">
+                              <label>Nombre</label>
+                              <input
+                                value={formEdicion.nombre}
+                                onChange={(e) => setFormEdicion({ ...formEdicion, nombre: e.target.value })}
+                              />
+                            </div>
+                            <div className="campo">
+                              <label>Capacidad estimada (opcional)</label>
+                              <input
+                                type="number"
+                                value={formEdicion.capacidadEstimada}
+                                onChange={(e) => setFormEdicion({ ...formEdicion, capacidadEstimada: e.target.value })}
+                              />
+                            </div>
+                            <div className="campo">
+                              <label>Filas de la matriz</label>
+                              <input
+                                type="number"
+                                min="1"
+                                value={formEdicion.filas}
+                                onChange={(e) => setFormEdicion({ ...formEdicion, filas: e.target.value })}
+                              />
+                            </div>
+                            <div className="campo">
+                              <label>Columnas de la matriz</label>
+                              <input
+                                type="number"
+                                min="1"
+                                value={formEdicion.columnas}
+                                onChange={(e) => setFormEdicion({ ...formEdicion, columnas: e.target.value })}
+                              />
+                            </div>
+                          </div>
+                          {advertenciaFilas(formEdicion.filas) && (
+                            <p style={{ color: "#a35b1f", fontSize: 13, marginTop: 4 }}>{advertenciaFilas(formEdicion.filas)}</p>
+                          )}
+                          <p className="texto-suave" style={{ marginTop: 4 }}>
+                            El código no se puede cambiar desde acá (ya está impreso en tickets anteriores). Achicar filas/columnas no mueve las guardas ya asignadas a boxes que queden "fuera" del nuevo tamaño — revisá que no haya nada abierto ahí antes de achicar.
+                          </p>
+                          <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+                            <button
+                              className="boton boton-primario boton-chico"
+                              style={{ width: "auto" }}
+                              onClick={() => guardarEdicion(p)}
+                              disabled={guardandoEdicion}
+                            >
+                              {guardandoEdicion ? "Guardando…" : "Guardar cambios"}
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </React.Fragment>
+  );
+}
+
+// ============================================================================
+// TERMINALES
+// ============================================================================
+
+function AdminTerminales({ usuario }) {
+  const [lista, setLista] = useState([]);
+  const [puntosGuarda, setPuntosGuarda] = useState([]);
+  const [impresoras, setImpresoras] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [mensaje, setMensaje] = useState(null);
+  const [guardando, setGuardando] = useState(false);
+  const [form, setForm] = useState({ codigo: "", puntoGuardaId: "" });
+
+  function cargarLista() {
+    setCargando(true);
+    window.guardaSysDb
+      .collection("terminales")
+      .get()
+      .then((snap) => setLista(snap.docs.map((d) => ({ id: d.id, ...d.data() }))))
+      .finally(() => setCargando(false));
+  }
+
+  useEffect(() => {
+    cargarLista();
+    window.guardaSysDb
+      .collection("puntosGuarda")
+      .where("activo", "==", true)
+      .get()
+      .then((snap) => {
+        const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setPuntosGuarda(lista);
+        if (lista.length > 0) setForm((f) => ({ ...f, puntoGuardaId: lista[0].id }));
+      });
+    window.guardaSysDb
+      .collection("impresoras")
+      .get()
+      .then((snap) => setImpresoras(snap.docs.map((d) => ({ id: d.id, ...d.data() }))));
+  }, []);
+
+  async function crear(e) {
+    e.preventDefault();
+    setMensaje(null);
+    const codigo = form.codigo.trim().toUpperCase();
+    if (!codigo || !form.puntoGuardaId) {
+      setMensaje({ tipo: "error", texto: "Completá código y punto de guarda." });
+      return;
+    }
+    setGuardando(true);
+    try {
+      const ref = window.guardaSysDb.collection("terminales").doc(codigo);
+      const existe = (await ref.get()).exists;
+      if (existe) {
+        setMensaje({ tipo: "error", texto: `Ya existe una terminal con código "${codigo}".` });
+        return;
+      }
+      const datos = { codigo, puntoGuardaId: form.puntoGuardaId, impresoraId: null, activo: true };
+      await ref.set(datos);
+      await registrarAuditoria(usuario, "crear_terminal", "terminal", codigo, null, datos);
+      setForm({ ...form, codigo: "" });
+      cargarLista();
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  async function alternarActivo(t) {
+    const nuevoValor = !t.activo;
+    await window.guardaSysDb.collection("terminales").doc(t.id).update({ activo: nuevoValor });
+    await registrarAuditoria(usuario, nuevoValor ? "activar_terminal" : "desactivar_terminal", "terminal", t.id, { activo: t.activo }, { activo: nuevoValor });
+    cargarLista();
+  }
+
+  function nombrePuntoGuarda(id) {
+    const p = puntosGuarda.find((p) => p.id === id);
+    return p ? p.nombre : id;
+  }
+
+  function nombreImpresora(id) {
+    if (!id) return null;
+    const i = impresoras.find((i) => i.id === id);
+    return i ? i.nombre : id;
+  }
+
+  return (
+    <React.Fragment>
+      <div className="panel">
+        <h2>Nueva terminal</h2>
+        {mensaje && <div className="mensaje-error">{mensaje.texto}</div>}
+        {puntosGuarda.length === 0 ? (
+          <p className="texto-suave">Creá primero al menos un punto de guarda.</p>
+        ) : (
+          <form onSubmit={crear}>
+            <div className="fila-campos">
+              <div className="campo">
+                <label>Código de terminal</label>
+                <input
+                  value={form.codigo}
+                  onChange={(e) => setForm({ ...form, codigo: e.target.value })}
+                  placeholder="ej. PB-PC-01"
+                />
+              </div>
+              <div className="campo">
+                <label>Punto de guarda</label>
+                <select value={form.puntoGuardaId} onChange={(e) => setForm({ ...form, puntoGuardaId: e.target.value })}>
+                  {puntosGuarda.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.nombre} ({p.codigo})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <button className="boton boton-primario" style={{ width: "auto", padding: "10px 24px", marginTop: 8 }} disabled={guardando}>
+              {guardando ? "Creando…" : "Crear terminal"}
+            </button>
+          </form>
+        )}
+      </div>
+
+      <div className="panel">
+        <h2>Terminales existentes</h2>
+        {cargando ? (
+          <div className="cargando">Cargando…</div>
+        ) : (
+          <table className="tabla-admin">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Punto de guarda</th>
+                <th>Impresora asignada</th>
+                <th>Estado</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {lista.map((t) => (
+                <tr key={t.id}>
+                  <td><span className="ticket-codigo">{t.codigo}</span></td>
+                  <td>{nombrePuntoGuarda(t.puntoGuardaId)}</td>
+                  <td>{nombreImpresora(t.impresoraId) || "— sin asignar —"}</td>
+                  <td>
+                    <span className={"estado-badge " + (t.activo ? "estado-ok" : "estado-inactivo")}>
+                      {t.activo ? "Activo" : "Inactivo"}
+                    </span>
+                  </td>
+                  <td>
+                    <button className="boton boton-secundario boton-chico" onClick={() => alternarActivo(t)}>
+                      {t.activo ? "Desactivar" : "Activar"}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </React.Fragment>
+  );
+}
+
+// ============================================================================
+// IMPRESORAS
+// ============================================================================
+
+function AdminImpresoras({ usuario }) {
+  const [lista, setLista] = useState([]);
+  const [terminales, setTerminales] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [mensaje, setMensaje] = useState(null);
+  const [guardando, setGuardando] = useState(false);
+  const [form, setForm] = useState({ nombre: "", rutaRed: "", terminalId: "", modelo: "Epson TM-T20III" });
+  const [editandoId, setEditandoId] = useState(null);
+  const [rutaEditada, setRutaEditada] = useState("");
+  const [probandoId, setProbandoId] = useState(null);
+  const [resultadoPrueba, setResultadoPrueba] = useState({}); // { [impresoraId]: {tipo, texto} }
+
+  function cargarLista() {
+    setCargando(true);
+    window.guardaSysDb
+      .collection("impresoras")
+      .get()
+      .then((snap) => setLista(snap.docs.map((d) => ({ id: d.id, ...d.data() }))))
+      .finally(() => setCargando(false));
+  }
+
+  useEffect(() => {
+    cargarLista();
+    window.guardaSysDb
+      .collection("terminales")
+      .where("activo", "==", true)
+      .get()
+      .then((snap) => {
+        const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setTerminales(lista);
+        if (lista.length > 0) setForm((f) => ({ ...f, terminalId: lista[0].id }));
+      });
+  }, []);
+
+  async function crear(e) {
+    e.preventDefault();
+    setMensaje(null);
+    if (!form.nombre.trim() || !form.rutaRed.trim() || !form.terminalId) {
+      setMensaje({ tipo: "error", texto: "Completá nombre, ruta de red y terminal." });
+      return;
+    }
+    setGuardando(true);
+    try {
+      const datos = {
+        nombre: form.nombre.trim(),
+        rutaRed: form.rutaRed.trim(),
+        terminalId: form.terminalId,
+        modelo: form.modelo.trim(),
+        estado: "ok",
+        ultimoPing: null,
+      };
+      const ref = await window.guardaSysDb.collection("impresoras").add(datos);
+      // Vincular la terminal con esta impresora
+      await window.guardaSysDb.collection("terminales").doc(form.terminalId).update({ impresoraId: ref.id });
+      await registrarAuditoria(usuario, "crear_impresora", "impresora", ref.id, null, datos);
+      setForm({ ...form, nombre: "", rutaRed: "" });
+      cargarLista();
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  async function probarImpresora(impresora) {
+    setProbandoId(impresora.id);
+    setResultadoPrueba((prev) => ({ ...prev, [impresora.id]: null }));
+
+    if (!GUARDASYS_SERVIDOR_IMPRESION_URL || GUARDASYS_SERVIDOR_IMPRESION_URL.includes("REEMPLAZAR")) {
+      setResultadoPrueba((prev) => ({
+        ...prev,
+        [impresora.id]: { tipo: "error", texto: "Falta configurar la URL del Servidor de Impresión." },
+      }));
+      setProbandoId(null);
+      return;
+    }
+
+    try {
+      const resp = await fetch(`${GUARDASYS_SERVIDOR_IMPRESION_URL}/imprimir-prueba`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rutaRed: impresora.rutaRed, nombreImpresora: impresora.nombre }),
+      });
+      const data = await resp.json();
+      if (data.success) {
+        await registrarAuditoria(usuario, "probar_impresora", "impresora", impresora.id, null, { rutaRed: impresora.rutaRed });
+        setResultadoPrueba((prev) => ({ ...prev, [impresora.id]: { tipo: "exito", texto: "Enviada correctamente." } }));
+      } else {
+        setResultadoPrueba((prev) => ({ ...prev, [impresora.id]: { tipo: "error", texto: data.error || "No se pudo imprimir." } }));
+      }
+    } catch (err) {
+      setResultadoPrueba((prev) => ({
+        ...prev,
+        [impresora.id]: { tipo: "error", texto: "No se pudo conectar con el Servidor de Impresión." },
+      }));
+    } finally {
+      setProbandoId(null);
+    }
+  }
+
+  function nombreTerminal(id) {
+    const t = terminales.find((t) => t.id === id);
+    return t ? t.codigo : id;
+  }
+
+  async function guardarRutaEditada(impresora) {
+    const nuevaRuta = rutaEditada.trim();
+    if (!nuevaRuta) return;
+    await window.guardaSysDb.collection("impresoras").doc(impresora.id).update({ rutaRed: nuevaRuta });
+    await registrarAuditoria(usuario, "editar_impresora", "impresora", impresora.id, { rutaRed: impresora.rutaRed }, { rutaRed: nuevaRuta });
+    setEditandoId(null);
+    cargarLista();
+  }
+
+  return (
+    <React.Fragment>
+      <div className="panel">
+        <h2>Nueva impresora</h2>
+        {mensaje && <div className="mensaje-error">{mensaje.texto}</div>}
+        {terminales.length === 0 ? (
+          <p className="texto-suave">Creá primero al menos una terminal.</p>
+        ) : (
+          <form onSubmit={crear}>
+            <div className="fila-campos">
+              <div className="campo">
+                <label>Nombre</label>
+                <input
+                  value={form.nombre}
+                  onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+                  placeholder="ej. Impresora Planta Baja 1"
+                />
+              </div>
+              <div className="campo">
+                <label>Ruta de red compartida</label>
+                <input
+                  value={form.rutaRed}
+                  onChange={(e) => setForm({ ...form, rutaRed: e.target.value })}
+                  placeholder="\\IP-PC\NombreImpresora"
+                />
+              </div>
+              <div className="campo">
+                <label>Terminal</label>
+                <select value={form.terminalId} onChange={(e) => setForm({ ...form, terminalId: e.target.value })}>
+                  {terminales.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.codigo}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="campo">
+                <label>Modelo</label>
+                <input
+                  value={form.modelo}
+                  onChange={(e) => setForm({ ...form, modelo: e.target.value })}
+                />
+              </div>
+            </div>
+            <button className="boton boton-primario" style={{ width: "auto", padding: "10px 24px", marginTop: 8 }} disabled={guardando}>
+              {guardando ? "Creando…" : "Crear impresora"}
+            </button>
+          </form>
+        )}
+      </div>
+
+      <div className="panel">
+        <h2>Impresoras existentes</h2>
+        {cargando ? (
+          <div className="cargando">Cargando…</div>
+        ) : (
+          <table className="tabla-admin">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Terminal</th>
+                <th>Ruta de red</th>
+                <th>Modelo</th>
+                <th>Estado</th>
+                <th></th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {lista.map((i) => (
+                <tr key={i.id}>
+                  <td>{i.nombre}</td>
+                  <td>{nombreTerminal(i.terminalId)}</td>
+                  <td>
+                    {editandoId === i.id ? (
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <input
+                          value={rutaEditada}
+                          onChange={(e) => setRutaEditada(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && guardarRutaEditada(i)}
+                          style={{ width: 220 }}
+                          autoFocus
+                        />
+                        <button className="boton boton-primario boton-chico" onClick={() => guardarRutaEditada(i)}>
+                          Guardar
+                        </button>
+                        <button className="boton boton-secundario boton-chico" onClick={() => setEditandoId(null)}>
+                          Cancelar
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="ticket-codigo">{i.rutaRed}</span>
+                    )}
+                  </td>
+                  <td>{i.modelo}</td>
+                  <td>
+                    <span className={"estado-badge " + (i.estado === "ok" ? "estado-ok" : "estado-inactivo")}>
+                      {i.estado}
+                    </span>
+                  </td>
+                  <td>
+                    {editandoId !== i.id && (
+                      <button
+                        className="boton boton-secundario boton-chico"
+                        onClick={() => {
+                          setEditandoId(i.id);
+                          setRutaEditada(i.rutaRed);
+                        }}
+                      >
+                        Editar ruta
+                      </button>
+                    )}
+                  </td>
+                  <td>
+                    <button
+                      className="boton boton-secundario boton-chico"
+                      onClick={() => probarImpresora(i)}
+                      disabled={probandoId === i.id}
+                    >
+                      {probandoId === i.id ? "Enviando…" : "Probar"}
+                    </button>
+                    {resultadoPrueba[i.id] && (
+                      <div
+                        style={{
+                          fontSize: 11,
+                          marginTop: 4,
+                          color: resultadoPrueba[i.id].tipo === "exito" ? "var(--verde)" : "var(--rojo)",
+                        }}
+                      >
+                        {resultadoPrueba[i.id].texto}
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </React.Fragment>
+  );
+}
