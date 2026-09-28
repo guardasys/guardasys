@@ -3,6 +3,23 @@
 // Solo accesible para rol "administrador" (ya filtrado en el menú lateral).
 // ============================================================================
 
+// Firestore rechaza cualquier escritura que contenga un valor `undefined`
+// (tira excepción). Los objetos datosAntes/datosDespues arman con campos
+// que pueden no existir todavía en documentos viejos (ej: un punto de
+// guarda creado antes de la v0.20.0 no tiene `filas`/`columnas`), así que
+// acá se reemplaza cualquier `undefined` por `null` antes de mandarlo a
+// Firestore — de lo contrario `registrarAuditoria` explota DESPUÉS de que
+// el cambio real ya se guardó, y el usuario ve un error aunque los datos
+// hayan quedado bien guardados.
+function limpiarUndefined(obj) {
+  if (!obj || typeof obj !== "object") return obj || null;
+  const limpio = {};
+  Object.keys(obj).forEach((clave) => {
+    limpio[clave] = obj[clave] === undefined ? null : obj[clave];
+  });
+  return limpio;
+}
+
 function registrarAuditoria(usuario, accion, entidadTipo, entidadId, datosAntes, datosDespues) {
   return window.guardaSysDb.collection("auditoria").add({
     usuarioId: usuario.uid,
@@ -12,8 +29,8 @@ function registrarAuditoria(usuario, accion, entidadTipo, entidadId, datosAntes,
     accion,
     entidadTipo,
     entidadId,
-    datosAntes: datosAntes || null,
-    datosDespues: datosDespues || null,
+    datosAntes: limpiarUndefined(datosAntes),
+    datosDespues: limpiarUndefined(datosDespues),
   });
 }
 

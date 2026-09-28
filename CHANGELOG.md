@@ -4,6 +4,23 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 versionado según [SemVer](https://semver.org/lang/es/).
 
+## [0.20.1] - 2026-09-27
+
+### Corregido
+- **Falso error al editar un Punto de guarda.** Al guardar la edición de
+  un punto que todavía no tenía `filas`/`columnas` cargados (uno creado
+  antes de la v0.20.0), el sistema mostraba "No se pudieron guardar los
+  cambios" aunque el cambio SÍ quedaba guardado. La causa: el registro de
+  auditoría (que se guarda después del cambio real) incluía esos campos
+  como `undefined`, y Firestore rechaza cualquier escritura con un valor
+  `undefined`, por lo que esa segunda escritura fallaba y el navegador
+  mostraba el error — pero el dato del punto ya se había guardado bien
+  antes de llegar a esa parte. Se corrigió reemplazando cualquier
+  `undefined` por `null` antes de mandarlo al log de auditoría
+  (`registrarAuditoria`), de forma general para que no vuelva a pasar en
+  ningún otro módulo que use el mismo patrón (Usuarios, Terminales,
+  Impresoras, etc.).
+
 ## [0.20.0] - 2026-09-26
 
 ### Agregado
