@@ -4,6 +4,33 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 versionado según [SemVer](https://semver.org/lang/es/).
 
+## [0.21.0] - 2026-09-29
+
+### Cambiado
+- **Liberación diaria de boxes de la matriz.** Antes, una guarda que
+  quedaba abierta de un día anterior (carga mal hecha, cliente que retiró
+  sin pasar por Devoluciones) seguía bloqueando su box para siempre, hasta
+  que el Admin hiciera Cierre masivo. Ahora un box de la matriz solo
+  cuenta como ocupado si tiene una guarda **ingresada hoy** — al día
+  siguiente queda libre y se le puede asignar a un cliente nuevo, aunque
+  la guarda vieja siga en estado "abierta" hasta que se cierre por Cierre
+  masivo o Devoluciones. Confirmado con Paolo: las operaciones de cada box
+  son diarias, así que no hace falta bloquearlo hasta el cierre formal.
+  El mueble F no tiene esta liberación (no se reasigna por cliente, es un
+  espacio compartido).
+
+### Agregado
+- **Matriz de ocupación en Inicio.** Nueva sección en el Dashboard que
+  muestra, por punto de guarda, una cuadrícula con cada box en **verde**
+  (libre) o **rojo** (ocupado hoy), identificado por Fila (A, B, C…) y
+  Columna (1, 2, 3…) según el tamaño configurado para ese punto. Al pasar
+  el mouse o tocar un box ocupado se ve qué cliente y qué ticket lo tiene.
+  Aparte de la matriz, una tarjeta muestra cuántos bultos hay en el
+  mueble F de ese punto.
+  - Un **operador** ve solo la matriz de su propio punto de guarda
+    (según el campo configurado en Administración → Usuarios).
+  - Un **administrador** ve la matriz de todos los puntos activos.
+
 ## [0.20.1] - 2026-09-27
 
 ### Corregido

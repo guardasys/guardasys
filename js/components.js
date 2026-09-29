@@ -308,11 +308,97 @@ function GraficoCircular({ datos, textoVacio, etiquetaTotal }) {
   );
 }
 
+// ============================================================================
+// MATRIZ DE OCUPACIÓN — un box en verde (libre) o rojo (ocupado hoy), por
+// punto de guarda, con el mueble F aparte (v0.21.0).
+// ============================================================================
+
+/**
+ * A partir de la lista de operaciones abiertas (de TODOS los puntos), arma
+ * los datos de ocupación de UN punto puntual:
+ *  - `ocupados`: Map "FilaColumna" -> { codigoTicket, clienteNombre }, solo
+ *    de guardas que ingresaron HOY (misma liberación diaria que usa
+ *    registrarGuarda al asignar box).
+ *  - `totalF`: cantidad de bultos en el mueble F de ese punto — sin
+ *    liberación diaria, porque F no se reasigna por cliente.
+ */
+function calcularOcupacionPunto(puntoId, operacionesAbiertas) {
+  const ocupados = new Map();
+  let totalF = 0;
+  operacionesAbiertas.forEach((op) => {
+    if (op.puntoGuardaId !== puntoId) return;
+    const esDeHoy = diasAbierta(op.fechaIngreso) === 0;
+    (op.volumenes || []).forEach((v) => {
+      if (!v.ubicacion) return;
+      const cantidad = v.cantidadItems && v.cantidadItems > 1 ? v.cantidadItems : 1;
+      if (v.ubicacion.mueble === "F") {
+        totalF += cantidad;
+      } else if (v.ubicacion.mueble === "matriz" && esDeHoy) {
+        ocupados.set(`${v.ubicacion.fila}${v.ubicacion.columna}`, {
+          codigoTicket: op.codigoTicket,
+          clienteNombre: op.clienteSnapshot ? op.clienteSnapshot.nombreCompleto : null,
+        });
+      }
+    });
+  });
+  return { ocupados, totalF };
+}
+
+function MatrizPunto({ punto, ocupados, totalF }) {
+  const [boxSeleccionado, setBoxSeleccionado] = useState(null);
+  const filas = generarLetrasFilas(punto.filas || FILAS_MATRIZ_DEFAULT);
+  const columnas = punto.columnas || COLUMNAS_MATRIZ_DEFAULT;
+  const columnasArray = Array.from({ length: columnas }, (_, i) => i + 1);
+
+  return (
+    <div className="panel">
+      <h2>{punto.nombre || punto.codigo}</h2>
+      <div className="matriz-boxes">
+        {filas.map((fila) => (
+          <div className="matriz-fila" key={fila}>
+            {columnasArray.map((columna) => {
+              const clave = `${fila}${columna}`;
+              const info = ocupados.get(clave);
+              const etiquetaBox = `${fila}-${String(columna).padStart(2, "0")}`;
+              return (
+                <button
+                  key={clave}
+                  type="button"
+                  className={`matriz-box ${info ? "ocupado" : "libre"}`}
+                  title={info ? `${etiquetaBox} · ${info.clienteNombre || "—"} · Ticket ${info.codigoTicket || "—"}` : `${etiquetaBox} · Libre`}
+                  onClick={() => setBoxSeleccionado(info ? { etiquetaBox, ...info } : null)}
+                >
+                  {fila}{columna}
+                </button>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+
+      {boxSeleccionado && (
+        <p className="texto-suave" style={{ marginTop: 10, marginBottom: 0, fontSize: 13 }}>
+          Box <strong>{boxSeleccionado.etiquetaBox}</strong>: {boxSeleccionado.clienteNombre || "—"} · Ticket{" "}
+          <strong>{boxSeleccionado.codigoTicket || "—"}</strong>
+        </p>
+      )}
+
+      <div className="tarjeta-mueble-f">
+        Mueble F <span className="texto-suave">(maletas y desborde)</span>: <strong>{totalF}</strong> bulto(s)
+      </div>
+    </div>
+  );
+}
+
 function PanelInicio({ usuario }) {
   const [cargando, setCargando] = useState(true);
   const [mensaje, setMensaje] = useState(null);
   const [porPuntoHoy, setPorPuntoHoy] = useState([]);
   const [ocupacionPorPunto, setOcupacionPorPunto] = useState([]);
+  const [puntosMatriz, setPuntosMatriz] = useState([]);
+  const [operacionesAbiertas, setOperacionesAbiertas] = useState([]);
+
+  const esAdmin = usuario.rol === "administrador";
 
   useEffect(() => {
     async function cargar() {
@@ -323,13 +409,18 @@ function PanelInicio({ usuario }) {
         const desde = firebase.firestore.Timestamp.fromDate(inicioDelDia(hoy));
         const hasta = firebase.firestore.Timestamp.fromDate(finDelDia(hoy));
 
-        const [snapHoy, snapAbiertas] = await Promise.all([
+        const [snapHoy, snapAbiertas, snapPuntos] = await Promise.all([
           window.guardaSysDb.collection("operaciones").where("fechaIngreso", ">=", desde).where("fechaIngreso", "<=", hasta).get(),
           window.guardaSysDb.collection("operaciones").where("estado", "==", "abierta").get(),
+          window.guardaSysDb.collection("puntosGuarda").where("activo", "==", true).get(),
         ]);
 
         setPorPuntoHoy(contarPor(snapHoy.docs.map((d) => d.data()), (op) => op.puntoGuardaNombre));
         setOcupacionPorPunto(contarPor(snapAbiertas.docs.map((d) => d.data()), (op) => op.puntoGuardaNombre));
+        setOperacionesAbiertas(snapAbiertas.docs.map((d) => d.data()));
+
+        const puntos = snapPuntos.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setPuntosMatriz(esAdmin ? puntos : puntos.filter((p) => p.id === usuario.puntoGuardaId));
       } catch (err) {
         console.error(err);
         setMensaje({ tipo: "error", texto: "No se pudieron cargar los indicadores de Inicio." });
@@ -366,6 +457,28 @@ function PanelInicio({ usuario }) {
           {cargando ? <div className="cargando">Cargando…</div> : <GraficoCircular datos={ocupacionPorPunto} textoVacio="No hay guardas abiertas en este momento." etiquetaTotal="Ocupación actual por punto de guarda" />}
         </div>
       </div>
+
+      <div className="encabezado-pagina" style={{ marginTop: 8 }}>
+        <h1 style={{ fontSize: 18 }}>Ocupación de boxes</h1>
+        <p>
+          Verde = libre, rojo = ocupado hoy. Tocá o pasá el mouse sobre un box ocupado para ver quién lo tiene.
+        </p>
+      </div>
+
+      {cargando ? (
+        <div className="cargando">Cargando…</div>
+      ) : !esAdmin && !usuario.puntoGuardaId ? (
+        <p className="texto-suave">Tu usuario todavía no tiene un punto de guarda asignado — pedile a un administrador que te lo configure.</p>
+      ) : puntosMatriz.length === 0 ? (
+        <p className="texto-suave">No hay puntos de guarda activos para mostrar.</p>
+      ) : (
+        <div className="grilla-graficos">
+          {puntosMatriz.map((punto) => {
+            const { ocupados, totalF } = calcularOcupacionPunto(punto.id, operacionesAbiertas);
+            return <MatrizPunto key={punto.id} punto={punto} ocupados={ocupados} totalF={totalF} />;
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -389,7 +502,18 @@ const TIPOS_DOCUMENTO = ["CPF", "CI", "DNI", "Pasaporte", "Otro"];
 //
 // Cada box es de UN SOLO CLIENTE por vez — se ocupa entero apenas se le
 // asigna a una guarda, y recién se libera cuando esa guarda se cierra
-// (Devoluciones o Cierre masivo).
+// (Devoluciones o Cierre masivo)... con UNA excepción (v0.21.0):
+//
+// LIBERACIÓN DIARIA — las operaciones en el box son diarias (confirmado
+// con Paolo). Un box de la MATRIZ solo cuenta como "ocupado" para una
+// guarda nueva si tiene un volumen de una operación abierta CON FECHA DE
+// INGRESO DE HOY. Una guarda que quedó abierta de un día anterior (carga
+// mal hecha, cliente que retiró sin pasar por Devoluciones, etc.) deja de
+// bloquear su box al día siguiente — el box queda disponible para
+// asignarse a otro cliente — aunque esa guarda vieja siga en estado
+// "abierta" hasta que el Admin la cierre por Cierre masivo. El mueble F
+// NO tiene esta liberación diaria (no hace falta: no se reutiliza por
+// cliente, es un solo espacio compartido).
 //
 // TODOS los volúmenes de un mismo cliente van juntos al MISMO box (no uno
 // por volumen) — hasta 5 volúmenes (sin contar maletas). Si trae más de
@@ -816,11 +940,18 @@ function NuevaGuarda({ usuario }) {
     // aceptado que ya existe en otras partes del sistema (no usamos
     // transacciones en todos lados). Si en la práctica esto llega a
     // pasar, se puede revisar más adelante.
+    //
+    // Liberación diaria (v0.21.0): un box de la matriz solo cuenta como
+    // ocupado si la guarda que lo tiene ingresó HOY (diasAbierta === 0,
+    // misma cuenta que ya usa Cierre masivo). Una guarda abierta de un
+    // día anterior ya no bloquea su box — ver nota en el bloque de
+    // comentarios de más arriba.
     const snapAbiertas = await window.guardaSysDb.collection("operaciones").where("estado", "==", "abierta").get();
     const boxesOcupados = new Set();
     snapAbiertas.docs.forEach((doc) => {
       const op = doc.data();
       if (op.puntoGuardaId !== puntoGuarda.id) return;
+      if (diasAbierta(op.fechaIngreso) !== 0) return;
       (op.volumenes || []).forEach((v) => {
         if (v.ubicacion && v.ubicacion.mueble === "matriz") {
           boxesOcupados.add(`${v.ubicacion.fila}${v.ubicacion.columna}`);
